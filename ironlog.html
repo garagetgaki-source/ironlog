@@ -47,8 +47,10 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
 .progress-bar.blue{background:linear-gradient(90deg,#0091ea,var(--blue))}
 .progress-bar.red{background:linear-gradient(90deg,var(--accent),var(--accent2))}
 .progress-bar.yellow{background:linear-gradient(90deg,#f57f17,var(--gold))}
+/* DASHBOARD GRID */
 .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.stat-card{background:var(--surface);border:1px solid #222;border-radius:var(--radius);padding:14px}
+.stat-card{background:var(--surface);border:1px solid #222;border-radius:var(--radius);padding:14px;cursor:pointer;transition:all .15s}
+.stat-card:active{transform:scale(0.97)}
 .stat-card .val{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:700;line-height:1.1}
 .stat-card .val .unit{font-size:16px;font-weight:400;color:var(--text2);margin-left:2px}
 .stat-card .lbl{font-size:11px;color:var(--text2);margin-top:4px}
@@ -57,6 +59,11 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
 .stat-card.green-card{border-color:#00e676;background:#0a1a0e}
 .stat-card.blue-card{border-color:#40c4ff;background:#0a141a}
 .stat-card.gold-card{border-color:#ffd600;background:#1a1600}
+/* 未入力煽りカード */
+.stat-card.unset{border-color:#444;background:var(--surface2);animation:pulse-border 2s infinite}
+@keyframes pulse-border{0%,100%{border-color:#444}50%{border-color:#888}}
+.stat-card.unset .val{font-size:14px;font-weight:700;color:var(--accent);line-height:1.4}
+.stat-card.unset .lbl{color:var(--text3)}
 .section-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin:16px 0 8px}
 .log-item{background:var(--surface);border:1px solid #222;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
 .log-item .name{font-weight:700;font-size:15px}
@@ -71,6 +78,36 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
 .sleep-opt .emoji{font-size:28px;margin-bottom:4px}
 .fatigue-display{font-family:'Barlow Condensed',sans-serif;font-size:48px;font-weight:900;text-align:center;margin:8px 0;line-height:1}
 .fatigue-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:4px}
+/* WEIGHT GRAPH */
+.graph-wrap{position:relative;height:120px;margin:8px 0}
+.graph-svg{width:100%;height:100%}
+.graph-tabs{display:flex;gap:6px;margin-bottom:8px}
+.graph-tab{background:var(--surface2);border:1px solid #333;border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s}
+.graph-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+/* CALENDAR */
+.cal-wrap{margin-top:4px}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cal-month{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700}
+.cal-nav{background:var(--surface2);border:1px solid #333;border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:14px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-day-label{text-align:center;font-size:10px;color:var(--text2);padding:2px 0}
+.cal-day{aspect-ratio:1;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;cursor:pointer;transition:all .15s;background:var(--surface2);position:relative;min-height:36px}
+.cal-day:active{transform:scale(0.9)}
+.cal-day.today{border:2px solid var(--accent)}
+.cal-day.empty{background:transparent;cursor:default}
+.cal-day .cal-num{font-size:11px;font-weight:700;line-height:1}
+.cal-day .cal-label{font-size:8px;margin-top:1px;font-weight:700;line-height:1}
+/* 今日は何の日 */
+.day-type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+.day-type-btn{border:2px solid transparent;border-radius:8px;padding:10px 4px;text-align:center;cursor:pointer;transition:all .15s;font-size:12px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px}
+.day-type-btn:active{transform:scale(0.95)}
+.day-type-btn.selected{border-color:#fff}
+.day-type-dot{width:12px;height:12px;border-radius:50%;margin-bottom:2px}
+/* 部位編集 */
+.muscle-edit-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #1e1e1e}
+.muscle-edit-row:last-child{border-bottom:none}
+.color-dot{width:20px;height:20px;border-radius:50%;flex-shrink:0}
+/* WEEK CHART */
 .week-chart{display:flex;align-items:flex-end;gap:4px;height:60px;margin:12px 0}
 .week-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
 .week-bar{width:100%;background:var(--surface2);border-radius:4px 4px 0 0;min-height:3px;transition:height .4s ease}
@@ -126,14 +163,16 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
 .finish-btn .f-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;color:var(--green);letter-spacing:1px}
 .finish-btn .f-sub{font-size:12px;color:#5dba7a;margin-top:2px}
 .edit-form{margin-top:12px;display:flex;flex-direction:column;gap:8px}
-/* 設定ボタン */
 .settings-btn{background:var(--surface2);border:1px solid #333;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:18px;flex-shrink:0;transition:all .15s}
 .settings-btn:active{border-color:var(--accent);color:var(--accent)}
-/* 設定行 */
 .settings-row{padding:14px 0;border-bottom:1px solid #1e1e1e;display:flex;flex-direction:column;gap:8px}
 .settings-row:last-child{border-bottom:none}
 .settings-row-label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:1px}
 .settings-row-current{font-size:13px;color:var(--text3);margin-bottom:2px}
+/* COLOR PICKER */
+.color-options{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.color-opt{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.color-opt.selected{border-color:#fff;transform:scale(1.2)}
 </style>
 </head>
 <body>
@@ -168,6 +207,8 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
         <div class="modal-title">⚙️ 設定</div>
         <div class="modal-close" onclick="closeSettingsModal()">×</div>
       </div>
+      <!-- プロフィール設定 -->
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">プロフィール</div>
       <div class="settings-row">
         <div class="settings-row-label">ニックネーム</div>
         <div class="settings-row-current" id="cfg-name-current"></div>
@@ -193,7 +234,16 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
           <option value="2.2">×2.2（超積極的）</option>
         </select>
       </div>
-      <button class="btn btn-primary" onclick="saveSettings()" style="margin-top:16px">SAVE SETTINGS 💾</button>
+      <button class="btn btn-primary" onclick="saveSettings()" style="margin-top:12px">SAVE SETTINGS 💾</button>
+
+      <!-- データ管理 -->
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin:20px 0 8px">データ管理</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px">全データをJSONファイルとして保存・復元できます。機種変更やバックアップに使用してください。</div>
+      <button class="btn btn-secondary" onclick="exportData()" style="margin-bottom:8px">📤 データをエクスポート</button>
+      <label style="display:block">
+        <div class="btn btn-secondary" style="text-align:center;cursor:pointer;margin-top:0">📥 データをインポート</div>
+        <input type="file" accept=".json" onchange="importData(event)" style="display:none">
+      </label>
     </div>
   </div>
 
@@ -244,13 +294,27 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
       </div>
     </div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:8px">TODAY</div>
+    <!-- 煽りカード -->
     <div class="dash-grid">
-      <div class="stat-card accent"><div class="val" id="d-weight-val">--<span class="unit">kg</span></div><div class="lbl">体重</div></div>
-      <div class="stat-card green-card"><div class="val" id="d-protein-val">--<span class="unit">g</span></div><div class="lbl">タンパク質</div><div class="sub" id="d-protein-goal">目標: --g</div></div>
+      <div class="stat-card accent" id="d-card-weight" onclick="showScreen('weight')">
+        <div class="val" id="d-weight-val">--<span class="unit">kg</span></div>
+        <div class="lbl">体重</div>
+      </div>
+      <div class="stat-card green-card" id="d-card-protein" onclick="showScreen('protein')">
+        <div class="val" id="d-protein-val">--<span class="unit">g</span></div>
+        <div class="lbl">タンパク質</div>
+        <div class="sub" id="d-protein-goal">目標: --g</div>
+      </div>
     </div>
     <div class="dash-grid">
-      <div class="stat-card blue-card"><div class="val" id="d-volume-val">--<span class="unit">kg</span></div><div class="lbl">本日ボリューム</div></div>
-      <div class="stat-card gold-card"><div class="val" id="d-sleep-val">--<span class="unit">点</span></div><div class="lbl">回復スコア / 10</div></div>
+      <div class="stat-card blue-card" id="d-card-train" onclick="showScreen('train')">
+        <div class="val" id="d-volume-val">--<span class="unit">kg</span></div>
+        <div class="lbl">本日ボリューム</div>
+      </div>
+      <div class="stat-card gold-card" id="d-card-sleep" onclick="showScreen('sleep')">
+        <div class="val" id="d-sleep-val">--<span class="unit">点</span></div>
+        <div class="lbl">回復スコア / 10</div>
+      </div>
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
@@ -259,6 +323,28 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
       </div>
       <div class="progress-wrap"><div class="progress-bar green" id="d-prot-bar" style="width:0%"></div></div>
     </div>
+
+    <!-- 体重グラフ -->
+    <div class="section-title">体重推移</div>
+    <div class="card">
+      <div class="graph-tabs">
+        <div class="graph-tab active" id="gtab-7" onclick="switchGraphTab(7)">7日</div>
+        <div class="graph-tab" id="gtab-30" onclick="switchGraphTab(30)">30日</div>
+      </div>
+      <div class="graph-wrap">
+        <svg class="graph-svg" id="weight-graph-svg" viewBox="0 0 360 100" preserveAspectRatio="none"></svg>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-top:4px" id="graph-x-labels"></div>
+    </div>
+
+    <!-- トレーニングカレンダー -->
+    <div class="section-title">トレーニングカレンダー</div>
+    <div class="card">
+      <div class="cal-wrap" id="cal-wrap"></div>
+      <!-- 凡例 -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px" id="cal-legend"></div>
+    </div>
+
     <div class="section-title">今週のボリューム</div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -325,6 +411,23 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
       <div class="screen-title">トレーニング<span>.</span></div>
       <div class="date-badge" id="train-date"></div>
     </div>
+
+    <!-- 今日は何の日？ -->
+    <div class="card">
+      <div class="card-label">今日は何の日？</div>
+      <div class="day-type-grid" id="day-type-grid"></div>
+      <div style="font-size:12px;color:var(--text2);text-align:center" id="day-type-selected-label"></div>
+    </div>
+
+    <!-- 部位編集セクション -->
+    <div class="card" id="muscle-edit-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="card-label" style="margin-bottom:0">部位を編集</div>
+        <div style="font-size:12px;color:var(--accent);cursor:pointer" onclick="addMuscleGroup()">＋ 追加</div>
+      </div>
+      <div id="muscle-edit-list"></div>
+    </div>
+
     <div class="cat-tabs" id="cat-tabs"></div>
     <div id="ex-list"></div>
     <div class="ex-add-btn" onclick="openAddModal()">＋ 新しい種目を追加</div>
@@ -409,6 +512,9 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
 </div>
 
 <script>
+// =====================
+// DB / UTILS
+// =====================
 const DB={
   get(k){try{return JSON.parse(localStorage.getItem('ironlog_'+k)||'null')}catch{return null}},
   set(k,v){localStorage.setItem('ironlog_'+k,JSON.stringify(v))},
@@ -416,11 +522,32 @@ const DB={
 const today=()=>new Date().toISOString().slice(0,10);
 const fmtNum=n=>Math.round(n*10)/10;
 const fmtDateJP=d=>{const dt=new Date(d+'T00:00:00');return `${dt.getMonth()+1}月${dt.getDate()}日`};
+
 let cfg=DB.get('cfg')||null;
 let currentCat='全て';
 let longPressTimer=null;
 let editingExName=null;
+let graphDays=7;
+let calYear=new Date().getFullYear();
+let calMonth=new Date().getMonth();
 
+// =====================
+// 部位データ（編集可能）
+// =====================
+const DEFAULT_MUSCLE_GROUPS=[
+  {id:'chest',name:'胸',color:'#ff3d00'},
+  {id:'back',name:'背中',color:'#40c4ff'},
+  {id:'legs',name:'脚',color:'#00e676'},
+  {id:'shoulder',name:'肩',color:'#ffd600'},
+  {id:'arms',name:'腕',color:'#ff9100'},
+  {id:'abs',name:'腹',color:'#e040fb'},
+  {id:'rest',name:'休筋日',color:'#555555'},
+];
+function getMuscleGroups(){return DB.get('muscle_groups')||DEFAULT_MUSCLE_GROUPS;}
+
+// =====================
+// DEFAULT EXERCISES
+// =====================
 const DEFAULT_EXERCISES=[
   {name:'ベンチプレス',cat:'胸',tips:'肩甲骨を寄せて固定。バーは胸の下部へ。手首を立てて真上に押す。',yt:''},
   {name:'インクラインプレス',cat:'胸',tips:'角度30〜45度。上部胸筋を意識。肩を落としてセット。',yt:''},
@@ -438,6 +565,7 @@ const DEFAULT_EXERCISES=[
   {name:'トライセプス',cat:'腕',tips:'肘を固定して伸展。上腕三頭筋を強く収縮させる。',yt:''},
   {name:'ディップス',cat:'腕',tips:'前傾すると胸、直立すると三頭筋に効く。肘が外に開かないよう注意。',yt:''},
 ];
+
 const PROT_PRESETS=[
   {name:'プロテイン1杯',g:24},{name:'ゆで卵1個',g:6},
   {name:'朝ご飯',g:null},{name:'間食',g:null},
@@ -446,7 +574,9 @@ const PROT_PRESETS=[
 const CATS=['全て','胸','背中','脚','肩','腕','腹'];
 function getExercises(){return DB.get('exercises')||DEFAULT_EXERCISES;}
 
-// ---- SETTINGS MODAL ----
+// =====================
+// SETTINGS MODAL
+// =====================
 function openSettingsModal(){
   if(!cfg)return;
   const weights=DB.get('weights')||{};
@@ -468,19 +598,75 @@ function saveSettings(){
   const weight=parseFloat(document.getElementById('cfg-weight').value);
   const goal=parseFloat(document.getElementById('cfg-goal').value);
   const factor=parseFloat(document.getElementById('cfg-factor').value);
-  if(!isNaN(weight)&&weight>0){
-    const weights=DB.get('weights')||{};
-    weights[today()]=weight;
-    DB.set('weights',weights);
-  }
+  if(!isNaN(weight)&&weight>0){const weights=DB.get('weights')||{};weights[today()]=weight;DB.set('weights',weights);}
   cfg={...cfg,name,weightGoal:isNaN(goal)?cfg.weightGoal:goal,proteinFactor:isNaN(factor)?cfg.proteinFactor:factor};
   DB.set('cfg',cfg);
   closeSettingsModal();
-  renderDashboard();
-  renderProteinToday();
+  renderDashboard();renderProteinToday();
   toast('✓ 設定を保存しました！');
 }
 
+// =====================
+// EXPORT / IMPORT
+// =====================
+function exportData(){
+  const data={
+    version:1,
+    exportDate:new Date().toISOString(),
+    cfg:DB.get('cfg'),
+    weights:DB.get('weights'),
+    exercises:DB.get('exercises'),
+    muscle_groups:DB.get('muscle_groups'),
+    sleep_history:DB.get('sleep_history'),
+    day_types:DB.get('day_types'),
+  };
+  // タンパク質・トレーニングは日付ごと
+  const protKeys=Object.keys(localStorage).filter(k=>k.startsWith('ironlog_protein_'));
+  const trainKeys=Object.keys(localStorage).filter(k=>k.startsWith('ironlog_train_'));
+  data.protein_logs={};
+  protKeys.forEach(k=>{const date=k.replace('ironlog_protein_','');try{data.protein_logs[date]=JSON.parse(localStorage.getItem(k));}catch(e){}});
+  data.train_logs={};
+  trainKeys.forEach(k=>{const date=k.replace('ironlog_train_','');try{data.train_logs[date]=JSON.parse(localStorage.getItem(k));}catch(e){}});
+
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='ironlog_backup_'+today()+'.json';
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+  toast('✓ エクスポート完了！');
+}
+
+function importData(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.version||!data.cfg){toast('⚠ 無効なファイルです','#cc3300');return;}
+      if(!confirm('現在のデータを上書きしてインポートしますか？'))return;
+      if(data.cfg)DB.set('cfg',data.cfg);
+      if(data.weights)DB.set('weights',data.weights);
+      if(data.exercises)DB.set('exercises',data.exercises);
+      if(data.muscle_groups)DB.set('muscle_groups',data.muscle_groups);
+      if(data.sleep_history)DB.set('sleep_history',data.sleep_history);
+      if(data.day_types)DB.set('day_types',data.day_types);
+      if(data.protein_logs)Object.entries(data.protein_logs).forEach(([date,val])=>localStorage.setItem('ironlog_protein_'+date,JSON.stringify(val)));
+      if(data.train_logs)Object.entries(data.train_logs).forEach(([date,val])=>localStorage.setItem('ironlog_train_'+date,JSON.stringify(val)));
+      cfg=DB.get('cfg');
+      closeSettingsModal();
+      init();
+      toast('✓ インポート完了！');
+    }catch(err){toast('⚠ 読み込みに失敗しました','#cc3300');}
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+// =====================
+// ONBOARD / INIT
+// =====================
 function startApp(){
   const name=document.getElementById('ob-name').value.trim()||'トレーニー';
   const weight=parseFloat(document.getElementById('ob-weight').value)||70;
@@ -498,6 +684,7 @@ function init(){
   document.getElementById('onboard').style.display='none';
   ['weight','protein','train','sleep'].forEach(k=>document.getElementById(k+'-date').textContent=fmtDateJP(today()));
   renderProteinPresets();renderCatTabs();renderExList();
+  renderDayTypeGrid();renderMuscleEditList();
   renderDashboard();renderWeightHistory();renderProteinToday();
   renderTrainExercises();renderSleepHistory();renderSleepScore();
 }
@@ -509,62 +696,332 @@ function showScreen(name){
   if(name==='dash')renderDashboard();
   if(name==='weight')renderWeightHistory();
   if(name==='protein')renderProteinToday();
-  if(name==='train'){renderExList();renderTrainExercises();}
+  if(name==='train'){renderDayTypeGrid();renderMuscleEditList();renderExList();renderTrainExercises();}
   if(name==='sleep'){renderSleepHistory();renderSleepScore();}
 }
 function toast(msg,color){
   const el=document.getElementById('toast');
   el.style.background=color||'var(--green)';el.style.color=color?'#fff':'#000';
   el.textContent=msg;el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),2200);
+  setTimeout(()=>el.classList.remove('show'),2400);
 }
+
+// =====================
+// DAY TYPE（今日は何の日）
+// =====================
+function getDayTypes(){return DB.get('day_types')||{};}
+function saveDayType(date,typeId){
+  const dt=getDayTypes();dt[date]=typeId;DB.set('day_types',dt);
+  renderDayTypeGrid();renderCalendar();renderDashboard();
+}
+function renderDayTypeGrid(){
+  const groups=getMuscleGroups();
+  const dt=getDayTypes();
+  const selected=dt[today()]||null;
+  const el=document.getElementById('day-type-grid');
+  el.innerHTML=groups.map(g=>`
+    <div class="day-type-btn${selected===g.id?' selected':''}"
+      style="background:${selected===g.id?g.color+'33':'var(--surface2)'};border-color:${selected===g.id?g.color:'#333'}"
+      onclick="saveDayType('${today()}','${g.id}')">
+      <div class="day-type-dot" style="background:${g.color}"></div>
+      <div style="font-size:12px;color:${selected===g.id?g.color:'var(--text2)'}">${g.name}</div>
+    </div>`).join('');
+  const labelEl=document.getElementById('day-type-selected-label');
+  if(selected){
+    const g=groups.find(x=>x.id===selected);
+    labelEl.textContent=g?`今日は「${g.name}」の日 💪`:'';
+    labelEl.style.color=g?g.color:'var(--text2)';
+  } else {
+    labelEl.textContent='今日のメニューを選んでください';
+  }
+}
+
+// =====================
+// MUSCLE GROUP EDIT
+// =====================
+const COLOR_PALETTE=['#ff3d00','#ff9100','#ffd600','#00e676','#40c4ff','#e040fb','#f06292','#4db6ac','#555555','#90a4ae'];
+function renderMuscleEditList(){
+  const groups=getMuscleGroups();
+  const el=document.getElementById('muscle-edit-list');
+  el.innerHTML=groups.map((g,i)=>`
+    <div class="muscle-edit-row">
+      <div class="color-dot" style="background:${g.color}"></div>
+      <input class="inp" value="${g.name}" id="mg-name-${i}" style="flex:1;height:36px;font-size:14px;padding:6px 10px" oninput="updateMuscleGroup(${i},'name',this.value)">
+      <div style="display:flex;gap:4px;flex-wrap:wrap;max-width:140px">
+        ${COLOR_PALETTE.map(c=>`<div class="color-opt${g.color===c?' selected':''}" style="background:${c};width:22px;height:22px" onclick="updateMuscleGroup(${i},'color','${c}')"></div>`).join('')}
+      </div>
+      ${groups.length>1?`<div class="btn-icon" onclick="deleteMuscleGroup(${i})" style="flex-shrink:0">×</div>`:''}
+    </div>`).join('');
+  // カテゴリータブも更新
+  renderCatTabs();
+}
+function updateMuscleGroup(idx,field,val){
+  const groups=getMuscleGroups();
+  groups[idx][field]=val;
+  DB.set('muscle_groups',groups);
+  renderMuscleEditList();
+}
+function deleteMuscleGroup(idx){
+  const groups=getMuscleGroups();
+  if(groups.length<=1)return;
+  groups.splice(idx,1);
+  DB.set('muscle_groups',groups);
+  renderMuscleEditList();
+  toast('削除しました');
+}
+function addMuscleGroup(){
+  const groups=getMuscleGroups();
+  groups.push({id:'custom_'+Date.now(),name:'新しい部位',color:'#90a4ae'});
+  DB.set('muscle_groups',groups);
+  renderMuscleEditList();
+}
+
+// =====================
+// WEIGHT GRAPH
+// =====================
+function switchGraphTab(days){
+  graphDays=days;
+  document.getElementById('gtab-7').classList.toggle('active',days===7);
+  document.getElementById('gtab-30').classList.toggle('active',days===30);
+  renderWeightGraph();
+}
+function renderWeightGraph(){
+  const weights=DB.get('weights')||{};
+  const now=new Date();
+  const points=[];
+  for(let i=graphDays-1;i>=0;i--){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    const dk=d.toISOString().slice(0,10);
+    points.push({date:dk,val:weights[dk]||null,label:graphDays===7?fmtDateJP(dk):`${d.getMonth()+1}/${d.getDate()}`});
+  }
+  const vals=points.filter(p=>p.val!==null).map(p=>p.val);
+  if(vals.length<2){
+    document.getElementById('weight-graph-svg').innerHTML=`<text x="180" y="55" text-anchor="middle" fill="#555" font-size="12">データが2件以上必要です</text>`;
+    document.getElementById('graph-x-labels').innerHTML='';
+    return;
+  }
+  const minV=Math.min(...vals)-1;
+  const maxV=Math.max(...vals)+1;
+  const W=360,H=100,PAD=10;
+  const xScale=i=>(i/(graphDays-1))*(W-PAD*2)+PAD;
+  const yScale=v=>H-PAD-((v-minV)/(maxV-minV))*(H-PAD*2);
+
+  // グリッドライン
+  let svg=`<line x1="${PAD}" y1="${yScale((minV+maxV)/2)}" x2="${W-PAD}" y2="${yScale((minV+maxV)/2)}" stroke="#222" stroke-width="1"/>`;
+
+  // エリア
+  const filled=points.map((p,i)=>p.val!==null?{i,v:p.val}:null).filter(Boolean);
+  if(filled.length>=2){
+    let area=`M ${xScale(filled[0].i)} ${yScale(filled[0].v)}`;
+    filled.forEach(p=>{area+=` L ${xScale(p.i)} ${yScale(p.v)}`;});
+    area+=` L ${xScale(filled[filled.length-1].i)} ${H-PAD} L ${xScale(filled[0].i)} ${H-PAD} Z`;
+    svg+=`<path d="${area}" fill="#ff3d0022"/>`;
+    // ライン
+    let line=`M ${xScale(filled[0].i)} ${yScale(filled[0].v)}`;
+    filled.forEach(p=>{line+=` L ${xScale(p.i)} ${yScale(p.v)}`;});
+    svg+=`<path d="${line}" fill="none" stroke="#ff3d00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    // ドット
+    filled.forEach(p=>{
+      const isToday=points[p.i].date===today();
+      svg+=`<circle cx="${xScale(p.i)}" cy="${yScale(p.v)}" r="${isToday?5:3}" fill="${isToday?'#ffd600':'#ff3d00'}"/>`;
+      svg+=`<text x="${xScale(p.i)}" y="${yScale(p.v)-7}" text-anchor="middle" fill="#f0f0f0" font-size="9">${p.v}</text>`;
+    });
+    // 目標体重ライン
+    if(cfg&&cfg.weightGoal&&cfg.weightGoal>=minV&&cfg.weightGoal<=maxV){
+      const gy=yScale(cfg.weightGoal);
+      svg+=`<line x1="${PAD}" y1="${gy}" x2="${W-PAD}" y2="${gy}" stroke="#ffd600" stroke-width="1" stroke-dasharray="4,3"/>`;
+      svg+=`<text x="${W-PAD-2}" y="${gy-3}" text-anchor="end" fill="#ffd600" font-size="9">目標${cfg.weightGoal}kg</text>`;
+    }
+  }
+  document.getElementById('weight-graph-svg').innerHTML=svg;
+
+  // X軸ラベル
+  const step=graphDays===7?1:Math.ceil(graphDays/6);
+  const labels=points.filter((_,i)=>i%step===0||i===graphDays-1).map(p=>p.label);
+  document.getElementById('graph-x-labels').innerHTML=labels.map(l=>`<span>${l}</span>`).join('');
+}
+
+// =====================
+// CALENDAR
+// =====================
+function renderCalendar(){
+  const dayTypes=getDayTypes();
+  const muscleGroups=getMuscleGroups();
+  const getMG=id=>muscleGroups.find(g=>g.id===id);
+
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const todayStr=today();
+
+  const monthNames=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const dayLabels=['日','月','火','水','木','金','土'];
+
+  let html=`
+    <div class="cal-header">
+      <div class="cal-nav" onclick="prevMonth()">‹</div>
+      <div class="cal-month">${calYear}年 ${monthNames[calMonth]}</div>
+      <div class="cal-nav" onclick="nextMonth()">›</div>
+    </div>
+    <div class="cal-grid">
+      ${dayLabels.map(d=>`<div class="cal-day-label">${d}</div>`).join('')}
+      ${Array(firstDay).fill('<div class="cal-day empty"></div>').join('')}`;
+
+  for(let d=1;d<=daysInMonth;d++){
+    const dk=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const typeId=dayTypes[dk];
+    const mg=typeId?getMG(typeId):null;
+    const isToday=dk===todayStr;
+    const hasTrain=(DB.get('train_'+dk)||[]).length>0;
+    const bg=mg?mg.color+'33':'var(--surface2)';
+    const border=isToday?`border:2px solid var(--accent)`:'';
+    html+=`<div class="cal-day${isToday?' today':''}" style="background:${bg};${border}" onclick="tapCalDay('${dk}')">
+      <div class="cal-num" style="color:${mg?mg.color:'var(--text2)'}">${d}</div>
+      ${mg?`<div class="cal-label" style="color:${mg.color}">${mg.name}</div>`:''}
+      ${hasTrain&&!mg?`<div style="width:4px;height:4px;border-radius:50%;background:var(--accent);margin-top:2px"></div>`:''}
+    </div>`;
+  }
+  html+='</div>';
+
+  // 凡例
+  const usedIds=[...new Set(Object.values(dayTypes))];
+  const legendHtml=muscleGroups.filter(g=>usedIds.includes(g.id)).map(g=>`
+    <div style="display:flex;align-items:center;gap:4px;font-size:11px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${g.color}"></div>
+      <span style="color:var(--text2)">${g.name}</span>
+    </div>`).join('');
+
+  document.getElementById('cal-wrap').innerHTML=html;
+  document.getElementById('cal-legend').innerHTML=legendHtml;
+}
+function prevMonth(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
+function nextMonth(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
+function tapCalDay(dk){
+  // トレーニング画面に移動して日付を選択
+  showScreen('train');
+  toast(`${fmtDateJP(dk)}を選択`);
+}
+
+// =====================
+// DASHBOARD
+// =====================
 function renderDashboard(){
   if(!cfg)return;
   const weights=DB.get('weights')||{};
   const w=weights[today()];
-  document.getElementById('d-weight-val').innerHTML=w?`${w}<span class="unit">kg</span>`:`--<span class="unit">kg</span>`;
-  document.getElementById('dash-greeting').textContent=cfg.name+' さん、今日もやり切ろう！';
+  // 煽りカード処理
+  // 体重
+  const wCard=document.getElementById('d-card-weight');
+  if(w){
+    wCard.className='stat-card accent';
+    document.getElementById('d-weight-val').innerHTML=`${w}<span class="unit">kg</span>`;
+  } else {
+    wCard.className='stat-card unset';
+    document.getElementById('d-weight-val').innerHTML='今日も計ったか？';
+  }
+  // タンパク質
   const protLog=DB.get('protein_'+today())||[];
   const protTotal=Math.round(protLog.reduce((s,e)=>s+e.g,0));
   const goal=getProteinGoal();
   const pct=Math.min(100,Math.round(protTotal/goal*100));
-  document.getElementById('d-protein-val').innerHTML=`${protTotal}<span class="unit">g</span>`;
-  document.getElementById('d-protein-goal').textContent='目標: '+goal+'g';
+  const pCard=document.getElementById('d-card-protein');
+  if(protLog.length>0){
+    pCard.className='stat-card green-card';
+    document.getElementById('d-protein-val').innerHTML=`${protTotal}<span class="unit">g</span>`;
+    document.getElementById('d-protein-goal').textContent='目標: '+goal+'g';
+  } else {
+    pCard.className='stat-card unset';
+    document.getElementById('d-protein-val').innerHTML='まだ食ってねぇの？';
+    document.getElementById('d-protein-goal').textContent='目標: '+goal+'g';
+  }
   document.getElementById('d-prot-pct').textContent=pct+'%';
   document.getElementById('d-prot-bar').style.width=pct+'%';
-  const volToday=calcTotalVol(DB.get('train_'+today())||[]);
-  document.getElementById('d-volume-val').innerHTML=volToday?`${fmtNum(volToday)}<span class="unit">kg</span>`:`--<span class="unit">kg</span>`;
+
+  // トレーニング
+  const trainToday=DB.get('train_'+today())||[];
+  const volToday=calcTotalVol(trainToday);
+  const tCard=document.getElementById('d-card-train');
+  if(trainToday.length>0){
+    tCard.className='stat-card blue-card';
+    document.getElementById('d-volume-val').innerHTML=`${fmtNum(volToday)}<span class="unit">kg</span>`;
+  } else {
+    tCard.className='stat-card unset';
+    document.getElementById('d-volume-val').innerHTML='お前今日やれんの？';
+  }
+
+  // 回復スコア
   const sleepHistory=DB.get('sleep_history')||[];
   const todaySleep=sleepHistory.find(r=>r.date===today());
-  if(todaySleep){const score=Math.round(calcSleepScore(todaySleep.hours,todaySleep.quality,todaySleep.fatigue)*10)/10;document.getElementById('d-sleep-val').innerHTML=`${score}<span class="unit">点</span>`;}
-  else{document.getElementById('d-sleep-val').innerHTML=`--<span class="unit">点</span>`;}
+  const sCard=document.getElementById('d-card-sleep');
+  if(todaySleep){
+    sCard.className='stat-card gold-card';
+    const score=Math.round(calcSleepScore(todaySleep.hours,todaySleep.quality,todaySleep.fatigue)*10)/10;
+    document.getElementById('d-sleep-val').innerHTML=`${score}<span class="unit">点</span>`;
+  } else {
+    sCard.className='stat-card unset';
+    document.getElementById('d-sleep-val').innerHTML='昨夜どうだった？';
+  }
+
+  document.getElementById('dash-greeting').textContent=cfg.name+' さん、今日もやり切ろう！';
+
+  // ストリーク
   let streak=0;const now=new Date();
   for(let i=0;i<30;i++){const d2=new Date(now);d2.setDate(d2.getDate()-i);const dk=d2.toISOString().slice(0,10);const ok=weights[dk]||(DB.get('train_'+dk)||[]).length||(DB.get('protein_'+dk)||[]).length;if(i===0&&!ok)continue;if(ok)streak++;else break;}
   document.getElementById('dash-streak-badge').innerHTML=streak>0?`<div style="text-align:center;background:var(--surface2);border:1px solid #333;border-radius:8px;padding:6px 10px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:var(--gold)">${streak}</div><div style="font-size:10px;color:var(--text2)">日連続🔥</div></div>`:'';
+
+  // 週ボリューム
   const days=['日','月','火','水','木','金','土'];
   let weekData=[],weekTotal=0;
   for(let i=6;i>=0;i--){const d2=new Date(now);d2.setDate(d2.getDate()-i);const dk=d2.toISOString().slice(0,10);const v=calcTotalVol(DB.get('train_'+dk)||[]);weekData.push({day:days[d2.getDay()],vol:v,isToday:i===0});weekTotal+=v;}
   document.getElementById('d-week-vol').textContent=fmtNum(weekTotal)+' kg';
   const maxV=Math.max(...weekData.map(d=>d.vol),1);
   document.getElementById('d-week-chart').innerHTML=weekData.map(d=>`<div class="week-bar-wrap"><div class="week-bar" style="height:${Math.max(4,(d.vol/maxV)*54)}px;background:${d.isToday?'var(--accent)':'var(--surface3)'}"></div><div class="week-day" style="color:${d.isToday?'var(--accent)':'var(--text2)'}">${d.day}</div></div>`).join('');
+
+  // 直近
   const recentItems=[];
   for(let i=0;i<7;i++){const d2=new Date(now);d2.setDate(d2.getDate()-i);const dk=d2.toISOString().slice(0,10);const exList=DB.get('train_'+dk)||[];if(exList.length)recentItems.push({date:dk,text:exList.map(e=>e.name).slice(0,3).join(' / '),vol:calcTotalVol(exList)});}
   const recentEl=document.getElementById('d-recent-list');
-  if(!recentItems.length){recentEl.innerHTML='<div class="empty-state"><div class="icon">📊</div>まだ記録がありません</div>';return;}
-  recentEl.innerHTML=recentItems.slice(0,5).map(item=>`<div class="log-item"><div><div class="name" style="font-size:13px">${fmtDateJP(item.date)}</div><div class="detail">${item.text}</div></div><div style="text-align:right"><div class="vol">${fmtNum(item.vol)}</div><div class="vol-unit">kg</div></div></div>`).join('');
+  if(!recentItems.length){recentEl.innerHTML='<div class="empty-state"><div class="icon">📊</div>まだ記録がありません</div>';}
+  else{recentEl.innerHTML=recentItems.slice(0,5).map(item=>`<div class="log-item"><div><div class="name" style="font-size:13px">${fmtDateJP(item.date)}</div><div class="detail">${item.text}</div></div><div style="text-align:right"><div class="vol">${fmtNum(item.vol)}</div><div class="vol-unit">kg</div></div></div>`).join('');}
+
+  renderWeightGraph();
+  renderCalendar();
 }
-function renderCatTabs(){document.getElementById('cat-tabs').innerHTML=CATS.map(c=>`<div class="cat-tab${c===currentCat?' active':''}" onclick="selectCat('${c}')">${c}</div>`).join('');}
+
+// =====================
+// CATEGORY TABS
+// =====================
+function renderCatTabs(){
+  const groups=getMuscleGroups();
+  const cats=['全て',...groups.filter(g=>g.id!=='rest').map(g=>g.name)];
+  document.getElementById('cat-tabs').innerHTML=cats.map(c=>`<div class="cat-tab${c===currentCat?' active':''}" onclick="selectCat('${c}')">${c}</div>`).join('');
+  // 種目追加モーダルのセレクトも更新
+  const sel=document.getElementById('new-ex-cat');
+  if(sel){const cur=sel.value;sel.innerHTML=groups.filter(g=>g.id!=='rest').map(g=>`<option value="${g.name}">${g.name}</option>`).join('');if(cur)sel.value=cur;}
+}
 function selectCat(cat){currentCat=cat;renderCatTabs();renderExList();}
+
+// =====================
+// PR / HISTORY
+// =====================
 function getPR(exName){let pr=null;Object.keys(localStorage).filter(k=>k.startsWith('ironlog_train_')).forEach(k=>{try{const date=k.replace('ironlog_train_','');JSON.parse(localStorage.getItem(k)||'[]').forEach(ex=>{if(ex.name===exName)ex.sets.forEach(set=>{if(set.weight>0&&set.reps>0&&(!pr||set.weight>pr.weight||(set.weight===pr.weight&&set.reps>pr.reps)))pr={weight:set.weight,reps:set.reps,date};});});}catch(e){}});return pr;}
 function getExHistory(exName){const hist=[];Object.keys(localStorage).filter(k=>k.startsWith('ironlog_train_')).sort((a,b)=>b.localeCompare(a)).slice(0,30).forEach(k=>{try{const date=k.replace('ironlog_train_','');JSON.parse(localStorage.getItem(k)||'[]').forEach(ex=>{if(ex.name===exName)ex.sets.forEach((set,si)=>{if(set.weight>0&&set.reps>0)hist.push({date,set:si+1,weight:set.weight,reps:set.reps});});});}catch(e){}});return hist;}
+
+// =====================
+// EXERCISE LIST
+// =====================
 function renderExList(){
-  const exercises=getExercises();const filtered=currentCat==='全て'?exercises:exercises.filter(e=>e.cat===currentCat);const el=document.getElementById('ex-list');
+  const exercises=getExercises();
+  const groups=getMuscleGroups();
+  const filtered=currentCat==='全て'?exercises:exercises.filter(e=>e.cat===currentCat);
+  const el=document.getElementById('ex-list');
   if(!filtered.length){el.innerHTML='<div class="empty-state" style="padding:20px"><div class="icon">🏋️</div>種目がありません</div>';return;}
   el.innerHTML=filtered.map(ex=>{
     const pr=getPR(ex.name);const isEditing=editingExName===ex.name;
+    const mg=groups.find(g=>g.name===ex.cat);
+    const catColor=mg?mg.color:'#999';
     const prHtml=pr?`<div><div class="ex-card-pr">${pr.weight}kg × ${pr.reps}回</div><div class="ex-card-pr-date">${fmtDateJP(pr.date)}</div></div>`:`<div style="font-size:12px;color:var(--text3)">記録なし</div>`;
-    const editHtml=isEditing?`<div class="edit-form" onclick="event.stopPropagation()"><div style="font-size:11px;color:var(--gold);margin-bottom:4px">✏️ 編集モード</div><select class="inp" id="edit-cat-${safeid(ex.name)}" style="font-size:14px;padding:10px 12px">${CATS.filter(c=>c!=='全て').map(c=>`<option value="${c}"${ex.cat===c?' selected':''}>${c}</option>`).join('')}</select><textarea class="inp" id="edit-tips-${safeid(ex.name)}" rows="4" style="resize:none;font-size:14px;padding:10px 12px" placeholder="フォームのポイント...">${ex.tips||''}</textarea><input class="inp" id="edit-yt-${safeid(ex.name)}" placeholder="YouTube URL" value="${ex.yt||''}" style="font-size:14px;padding:10px 12px"><div style="display:flex;gap:8px"><button class="btn btn-green" onclick="saveExEdit('${esc(ex.name)}')" style="flex:1;padding:10px;font-size:15px;margin-top:0">保存 ✓</button><button class="btn btn-danger" onclick="deleteExercise('${esc(ex.name)}')" style="flex:1;padding:10px;font-size:15px;margin-top:0">削除 🗑</button></div></div>`:'';
-    return `<div class="ex-card${isEditing?' edit-mode':''}" ontouchstart="startLongPress('${esc(ex.name)}')" ontouchend="cancelLongPress()" ontouchmove="cancelLongPress()" onmousedown="startLongPress('${esc(ex.name)}')" onmouseup="cancelLongPress()" onmouseleave="cancelLongPress()" onclick="handleExCardClick('${esc(ex.name)}')"><div class="ex-card-top"><div><div class="ex-card-name">${ex.name}</div><div style="font-size:11px;color:var(--text2);margin-top:2px">${ex.cat}${isEditing?' ✏️':''}</div></div><div style="text-align:right">${prHtml}</div></div>${editHtml}</div>`;
+    const editHtml=isEditing?`<div class="edit-form" onclick="event.stopPropagation()"><div style="font-size:11px;color:var(--gold);margin-bottom:4px">✏️ 編集モード</div><select class="inp" id="edit-cat-${safeid(ex.name)}" style="font-size:14px;padding:10px 12px">${groups.filter(g=>g.id!=='rest').map(g=>`<option value="${g.name}"${ex.cat===g.name?' selected':''}>${g.name}</option>`).join('')}</select><textarea class="inp" id="edit-tips-${safeid(ex.name)}" rows="4" style="resize:none;font-size:14px;padding:10px 12px" placeholder="フォームのポイント...">${ex.tips||''}</textarea><input class="inp" id="edit-yt-${safeid(ex.name)}" placeholder="YouTube URL" value="${ex.yt||''}" style="font-size:14px;padding:10px 12px"><div style="display:flex;gap:8px"><button class="btn btn-green" onclick="saveExEdit('${esc(ex.name)}')" style="flex:1;padding:10px;font-size:15px;margin-top:0">保存 ✓</button><button class="btn btn-danger" onclick="deleteExercise('${esc(ex.name)}')" style="flex:1;padding:10px;font-size:15px;margin-top:0">削除 🗑</button></div></div>`:'';
+    return `<div class="ex-card${isEditing?' edit-mode':''}" ontouchstart="startLongPress('${esc(ex.name)}')" ontouchend="cancelLongPress()" ontouchmove="cancelLongPress()" onmousedown="startLongPress('${esc(ex.name)}')" onmouseup="cancelLongPress()" onmouseleave="cancelLongPress()" onclick="handleExCardClick('${esc(ex.name)}')"><div class="ex-card-top"><div><div class="ex-card-name">${ex.name}</div><div style="font-size:11px;color:${catColor};margin-top:2px">● ${ex.cat}${isEditing?' ✏️':''}</div></div><div style="text-align:right">${prHtml}</div></div>${editHtml}</div>`;
   }).join('');
 }
 function safeid(name){return name.replace(/[^a-zA-Z0-9]/g,'_');}
@@ -574,6 +1031,10 @@ function cancelLongPress(){if(longPressTimer){clearTimeout(longPressTimer);longP
 function handleExCardClick(name){if(editingExName===name)return;if(editingExName){editingExName=null;renderExList();return;}openExModal(name);}
 function saveExEdit(name){const exercises=getExercises();const idx=exercises.findIndex(e=>e.name===name);if(idx<0)return;const sid=safeid(name);exercises[idx].cat=document.getElementById('edit-cat-'+sid).value;exercises[idx].tips=document.getElementById('edit-tips-'+sid).value.trim();exercises[idx].yt=document.getElementById('edit-yt-'+sid).value.trim();DB.set('exercises',exercises);editingExName=null;renderExList();toast('✓ 保存しました！');}
 function deleteExercise(name){if(!confirm(name+' を削除しますか？'))return;DB.set('exercises',getExercises().filter(e=>e.name!==name));editingExName=null;renderExList();toast('削除しました');}
+
+// =====================
+// EXERCISE MODAL
+// =====================
 function openExModal(name){
   const ex=getExercises().find(e=>e.name===name);if(!ex)return;
   const pr=getPR(name);const hist=getExHistory(name).slice(0,20);
@@ -590,6 +1051,10 @@ function closeExModal(){document.getElementById('ex-modal').classList.remove('op
 function openAddModal(){document.getElementById('add-ex-modal').classList.add('open');}
 function closeAddModal(){document.getElementById('add-ex-modal').classList.remove('open');}
 function saveNewExercise(){const name=document.getElementById('new-ex-name').value.trim();if(!name){toast('⚠ 種目名を入力してください','#cc3300');return;}const exercises=getExercises();if(exercises.find(e=>e.name===name)){toast('⚠ 同じ名前の種目があります','#cc3300');return;}exercises.push({name,cat:document.getElementById('new-ex-cat').value,tips:document.getElementById('new-ex-tips').value.trim(),yt:document.getElementById('new-ex-yt').value.trim()});DB.set('exercises',exercises);['new-ex-name','new-ex-tips','new-ex-yt'].forEach(id=>document.getElementById(id).value='');closeAddModal();renderExList();toast('✓ '+name+' を追加！');}
+
+// =====================
+// SESSION
+// =====================
 let sessionExercises=[];
 function loadTodayTraining(){sessionExercises=DB.get('train_'+today())||[];}
 function addExToSession(name){loadTodayTraining();if(sessionExercises.find(e=>e.name===name)){toast('⚠ すでに追加済みです','#cc3300');return;}sessionExercises.push({name,sets:[{weight:0,reps:0}],done:false});DB.set('train_'+today(),sessionExercises);renderTrainExercises();toast('✓ '+name+' をセッションに追加！');}
@@ -601,7 +1066,8 @@ function finishWorkout(){loadTodayTraining();const vol=calcTotalVol(sessionExerc
 function calcTotalVol(exList){return exList.reduce((s,ex)=>s+ex.sets.reduce((ss,set)=>ss+(set.weight*set.reps),0),0);}
 function updateVolDisplay(){loadTodayTraining();const vol=calcTotalVol(sessionExercises);const el=document.getElementById('train-total-vol');if(el)el.textContent=fmtNum(vol)+' kg';const card=document.getElementById('train-vol-card');if(card)card.style.display=sessionExercises.length?'block':'none';}
 function renderTrainExercises(){
-  loadTodayTraining();const el=document.getElementById('train-exercises');const finishWrap=document.getElementById('train-finish-wrap');
+  loadTodayTraining();
+  const el=document.getElementById('train-exercises');const finishWrap=document.getElementById('train-finish-wrap');
   if(!sessionExercises.length){el.innerHTML='<div class="empty-state" style="padding:20px"><div class="icon">💪</div>種目カードをタップして追加</div>';document.getElementById('train-vol-card').style.display='none';finishWrap.innerHTML='';return;}
   el.innerHTML=sessionExercises.map((ex,ei)=>{
     const vol=ex.sets.reduce((s,set)=>s+(set.weight*set.reps),0);const isDone=ex.done||false;
@@ -613,6 +1079,10 @@ function renderTrainExercises(){
   finishWrap.innerHTML=`<div class="finish-btn" onclick="finishWorkout()"><div class="f-title">🏁 トレーニング終了</div><div class="f-sub">${doneCount}/${sessionExercises.length} 種目完了 · ${fmtNum(calcTotalVol(sessionExercises))}kg</div></div>`;
   updateVolDisplay();
 }
+
+// =====================
+// SLEEP
+// =====================
 function calcSleepScore(hours,quality,fatigue){let hScore=4;if(hours<7)hScore=Math.max(0,4-(7-hours)*1.5);else if(hours>9)hScore=Math.max(0,4-(hours-9)*1.5);const qScore=quality-1;const fScore=Math.max(0,3-((fatigue-1)/9)*3);return Math.round((hScore+qScore+fScore)*10)/10;}
 function renderSleepScore(){const sleepHistory=DB.get('sleep_history')||[];const todaySleep=sleepHistory.find(r=>r.date===today());const card=document.getElementById('sleep-score-card');if(!todaySleep){card.style.display='none';return;}card.style.display='block';const score=Math.round(calcSleepScore(todaySleep.hours,todaySleep.quality,todaySleep.fatigue)*10)/10;document.getElementById('score-display').textContent=score;let color,comment,barClass;if(score>=8){color='var(--green)';comment='最高の回復状態 🔥';barClass='green';}else if(score>=6){color='var(--yellow)';comment='まずまずの回復 👍';barClass='yellow';}else if(score>=4){color='var(--accent2)';comment='回復不足気味 😐';barClass='red';}else{color='var(--accent)';comment='オーバートレーニング注意！ 💀';barClass='red';}document.getElementById('score-display').style.color=color;document.getElementById('score-comment').textContent=comment;document.getElementById('score-comment').style.color=color;document.getElementById('score-detail').textContent=`睡眠${todaySleep.hours.toFixed(1)}h / 質${todaySleep.quality}/4 / 疲労${todaySleep.fatigue}/10`;document.getElementById('score-bar').className='progress-bar '+barClass;document.getElementById('score-bar').style.width=(score/10*100)+'%';}
 let selectedQuality=4;
@@ -621,14 +1091,23 @@ function selectQuality(q){selectedQuality=q;document.querySelectorAll('.sleep-op
 function updateFatigue(){const val=parseInt(document.getElementById('fatigue-slider').value);const el=document.getElementById('fatigue-display');el.textContent=val;el.style.color=val<=3?'var(--green)':val<=6?'var(--yellow)':'var(--accent)';}
 function saveSleep(){const hours=parseFloat(document.getElementById('sleep-hours').value);const fatigue=parseInt(document.getElementById('fatigue-slider').value);const note=document.getElementById('sleep-note').value.trim();const history=DB.get('sleep_history')||[];const idx=history.findIndex(r=>r.date===today());const rec={hours,quality:selectedQuality,fatigue,note,date:today()};if(idx>=0)history[idx]=rec;else history.push(rec);DB.set('sleep_history',history);toast('✓ 睡眠・疲労記録を保存！');renderSleepHistory();renderSleepScore();renderDashboard();}
 function renderSleepHistory(){const history=(DB.get('sleep_history')||[]).slice(-7).reverse();const el=document.getElementById('sleep-history');if(!history.length){el.innerHTML='<div class="empty-state"><div class="icon">🌙</div>記録がありません</div>';return;}const qualLabel={4:'爆睡😴',3:'まあまあ🙂',2:'浅め😐',1:'最悪😩'};el.innerHTML=history.map(r=>{const score=Math.round(calcSleepScore(r.hours,r.quality,r.fatigue)*10)/10;const scoreColor=score>=8?'var(--green)':score>=6?'var(--yellow)':'var(--accent)';return `<div class="log-item"><div><div class="name">${fmtDateJP(r.date)}</div><div class="detail">${qualLabel[r.quality]||''} ${r.note?'/ '+r.note.slice(0,15):''}</div></div><div style="display:flex;gap:12px;align-items:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px">${r.hours.toFixed(1)}h</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:${scoreColor}">${score}<span style="font-size:12px;color:var(--text2)">/10</span></div></div></div>`;}).join('');}
+
+// =====================
+// PROTEIN
+// =====================
 function renderProteinPresets(){document.getElementById('prot-presets').innerHTML=PROT_PRESETS.map(p=>{const gHtml=p.g!=null?`<span class="chip-g">${p.g}g</span>`:`<span class="chip-g empty">g入力</span>`;return `<div class="preset-chip" onclick="selectProtPreset('${p.name}',${p.g??'null'})">${p.name}${gHtml}</div>`;}).join('');}
 function selectProtPreset(name,g){document.getElementById('prot-food').value=name;document.getElementById('prot-amount').value=(g!==null&&g!=='null')?g:'';document.getElementById('prot-amount').focus();}
 function getProteinGoal(){const weights=DB.get('weights')||{};const keys=Object.keys(weights).sort();const latestW=keys.length?weights[keys[keys.length-1]]:70;return Math.round(latestW*(cfg?.proteinFactor||1.6));}
 function saveProtein(){const food=document.getElementById('prot-food').value.trim()||'食事';const g=parseFloat(document.getElementById('prot-amount').value);if(isNaN(g)||g<=0){toast('⚠ タンパク質量を入力してください','#cc3300');return;}const log=DB.get('protein_'+today())||[];log.push({food,g,time:new Date().toTimeString().slice(0,5)});DB.set('protein_'+today(),log);toast(`✓ ${food}: +${g}g 追加！`);document.getElementById('prot-food').value='';document.getElementById('prot-amount').value='';renderProteinToday();renderDashboard();}
 function deleteProtein(idx){const log=DB.get('protein_'+today())||[];log.splice(idx,1);DB.set('protein_'+today(),log);renderProteinToday();renderDashboard();}
 function renderProteinToday(){const log=DB.get('protein_'+today())||[];const goal=getProteinGoal();const total=log.reduce((s,e)=>s+e.g,0);const pct=Math.min(100,Math.round(total/goal*100));document.getElementById('prot-goal-display').textContent=goal+' g';document.getElementById('prot-total-display').textContent=Math.round(total)+' g';document.getElementById('prot-progress-bar').style.width=pct+'%';document.getElementById('prot-pct-display').textContent=pct+'%';const el=document.getElementById('prot-log-list');if(!log.length){el.innerHTML='<div class="empty-state"><div class="icon">🥩</div>食事を追加しましょう</div>';return;}el.innerHTML=[...log].reverse().map((e,i)=>{const realIdx=log.length-1-i;return `<div class="log-item"><div><div class="name">${e.food}</div><div class="detail">${e.time}</div></div><div style="display:flex;align-items:center;gap:8px"><div style="text-align:right"><div class="vol">${e.g}</div><div class="vol-unit">g</div></div><div class="btn-icon" onclick="deleteProtein(${realIdx})">×</div></div></div>`;}).join('');}
+
+// =====================
+// WEIGHT
+// =====================
 function saveWeight(){const val=parseFloat(document.getElementById('weight-input').value);if(isNaN(val)||val<20||val>300){toast('⚠ 正しい体重を入力してください','#cc3300');return;}const weights=DB.get('weights')||{};weights[today()]=val;DB.set('weights',weights);toast('✓ 体重を保存しました！');document.getElementById('weight-input').value='';renderWeightHistory();renderDashboard();}
 function renderWeightHistory(){const weights=DB.get('weights')||{};const keys=Object.keys(weights).sort((a,b)=>b.localeCompare(a)).slice(0,14);const el=document.getElementById('weight-history');if(!keys.length){el.innerHTML='<div class="empty-state"><div class="icon">⚖️</div>体重を記録しましょう</div>';return;}el.innerHTML=keys.map((k,i)=>{const prev=i<keys.length-1?weights[keys[i+1]]:null;const diff=prev!=null?fmtNum(weights[k]-prev):null;const diffStr=diff!=null?(diff>0?`<span style="color:var(--accent)">+${diff}kg</span>`:`<span style="color:var(--green)">${diff}kg</span>`):'';return `<div class="log-item"><div><div class="name">${fmtDateJP(k)}</div><div class="detail">${i===0?'本日':'前回比 '+diffStr}</div></div><div style="text-align:right"><div class="vol">${weights[k]}</div><div class="vol-unit">kg</div></div></div>`;}).join('');}
+
 init();
 </script>
 </body>
