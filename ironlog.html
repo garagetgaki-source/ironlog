@@ -512,7 +512,7 @@ const DB={
   get(k){try{return JSON.parse(localStorage.getItem('ironlog_'+k)||'null')}catch{return null}},
   set(k,v){localStorage.setItem('ironlog_'+k,JSON.stringify(v))},
 };
-function today(){return new Date().toISOString().slice(0,10);}
+function today(){   const d=new Date();   d.setMinutes(d.getMinutes()-d.getTimezoneOffset());   return d.toISOString().slice(0,10); }
 let _lastDate=today();
 setInterval(()=>{if(today()!==_lastDate)location.reload();},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&today()!==_lastDate)location.reload();});
