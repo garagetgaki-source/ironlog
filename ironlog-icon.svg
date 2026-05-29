@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 背景 -->
+  <rect width="512" height="512" rx="80" fill="#0a0a0a"/>
+  
+  <!-- ダンベル -->
+  <!-- 左ウェイト -->
+  <rect x="48" y="190" width="60" height="132" rx="18" fill="#ff3d00"/>
+  <rect x="80" y="210" width="32" height="92" rx="10" fill="#cc2d00"/>
+  
+  <!-- 左内側ウェイト -->
+  <rect x="108" y="208" width="36" height="96" rx="12" fill="#ff3d00"/>
+  
+  <!-- バー -->
+  <rect x="144" y="240" width="224" height="32" rx="10" fill="#ff3d00"/>
+  
+  <!-- 右内側ウェイト -->
+  <rect x="368" y="208" width="36" height="96" rx="12" fill="#ff3d00"/>
+  
+  <!-- 右ウェイト -->
+  <rect x="404" y="190" width="60" height="132" rx="18" fill="#ff3d00"/>
+  <rect x="404" y="210" width="32" height="92" rx="10" fill="#cc2d00"/>
+
+  <!-- IL テキスト -->
+  <text x="256" y="430" 
+    font-family="Arial Black, Arial, sans-serif" 
+    font-weight="900" 
+    font-size="88" 
+    fill="#ff3d00" 
+    text-anchor="middle" 
+    letter-spacing="8">IL</text>
+</svg>

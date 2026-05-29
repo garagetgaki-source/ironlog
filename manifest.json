@@ -1,0 +1,18 @@
+{
+  "name": "IRON LOG",
+  "short_name": "IRON LOG",
+  "description": "筋肥大トラッカー",
+  "start_url": "./ironlog.html",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#ff3d00",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./ironlog-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
