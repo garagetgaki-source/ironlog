@@ -14,7 +14,7 @@
       "type": "image/svg+xml"
     },
     {
-      "src": "./ironlog-icon-512.png",
+      "src": "./ironlog-icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
