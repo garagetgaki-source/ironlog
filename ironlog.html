@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>IRON LOG</title>
+  <link rel="manifest" href="./manifest.json">
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js');}</script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -894,7 +896,7 @@ function openExModal(name){
   const pr=getPR(name);const hist=getExHistory(name).slice(0,20);
   document.getElementById('modal-ex-name').textContent=name;
   const prHtml=pr?`<div style="background:#1a1600;border:1px solid #ffd600;border-radius:8px;padding:12px;margin-bottom:12px"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">🏆 PERSONAL RECORD</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:700;color:var(--gold)">${pr.weight}kg × ${pr.reps}回</div><div style="font-size:12px;color:var(--text2);margin-top:2px">${fmtDateJP(pr.date)}</div></div>`:`<div style="color:var(--text2);font-size:13px;margin-bottom:12px">まだ記録がありません</div>`;
-  const tipsHtml=ex.tips?`<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📌 フォームのポイント</div><div style="font-size:14px;line-height:1.7">${ex.tips.replace(/\n/g,'<br>')}</div></div>`:'';
+  const tipsHtml=ex.tips?`<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📌 フォームのポイント</div><div style="font-size:14px;line-height:1.7">${ex.tips.split('\n').join('<br>')}</div></div>`:'';
   const ytHtml=ex.yt?`<a href="${ex.yt}" target="_blank" style="display:block;background:var(--surface2);border:1px solid #333;border-radius:8px;padding:12px;text-align:center;color:var(--blue);font-size:14px;font-weight:700;text-decoration:none;margin-bottom:12px">▶ YouTube で動画を見る</a>`:'';
   let histHtml='';
   if(hist.length){const prKey=pr?`${pr.date}-${pr.weight}-${pr.reps}`:null;histHtml=`<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 記録履歴</div>`+hist.map(h=>{const isPR=prKey&&`${h.date}-${h.weight}-${h.reps}`===prKey;return `<div class="hist-row"><span style="color:var(--text2)">${fmtDateJP(h.date)} SET${h.set}</span><span class="${isPR?'hist-pr':''}">${h.weight}kg × ${h.reps}回${isPR?' 🏆':''}</span></div>`;}).join('')+`</div>`;}
@@ -924,7 +926,7 @@ const DEFAULT_EXERCISES=[
   {name:'ディップス',cat:'腕',tips:'前傾すると胸、直立すると三頭筋に効く。肘が外に開かないよう注意。',yt:''},
 ];
 const PROT_PRESETS=[
-  {name:'プロテイン1杯',g:24},{name:'卵1個',g:6},
+  {name:'プロテイン1杯',g:24},{name:'ゆで卵1個',g:6},
   {name:'朝ご飯',g:null},{name:'間食',g:null},
   {name:'お昼ご飯',g:null},{name:'夕ご飯',g:null},{name:'夜食',g:null},
 ];// =====================
@@ -948,17 +950,39 @@ function renderTrainExercises(){
     const vol=ex.sets.reduce((s,set)=>s+(set.weight*set.reps),0);const isDone=ex.done||false;
     const exMaster=exercises.find(e=>e.name===ex.name);
     const tips=exMaster?exMaster.tips:'';
-    // ③ 完了後は種目名＋完了バッジのみ
     if(isDone){
       return `<div class="session-card done" style="padding:12px 16px"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:700;font-size:15px;color:var(--text2)">${ex.name}</div><div style="display:flex;align-items:center;gap:8px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;color:var(--text3)">${fmtNum(vol)}kg</div><div class="done-badge">✓</div><button onclick="toggleDone(${ei})" style="background:transparent;border:1px solid #333;border-radius:6px;color:var(--text2);padding:3px 8px;font-size:11px;cursor:pointer">戻す</button></div></div></div>`;
     }
     const setsHtml=ex.sets.map((set,si)=>`<div class="set-row"><div class="set-num">${si+1}</div><input class="inp" type="number" step="0.5" placeholder="重量kg" value="${set.weight||''}" oninput="updateSet(${ei},${si},'weight',this.value)" style="height:40px;font-size:15px;text-align:center"><input class="inp" type="number" step="1" placeholder="回数" value="${set.reps||''}" oninput="updateSet(${ei},${si},'reps',this.value)" style="height:40px;font-size:15px;text-align:center"><div class="btn-icon" onclick="removeSet(${ei},${si})">×</div></div>`).join('');
-    // ② フォームのポイント（折りたたみ）
-    const tipsHtml=tips?`<div style="margin-bottom:8px"><button onclick="var p=this.nextElementSibling;p.style.display=p.style.display==='none'?'block':'none';this.textContent=p.style.display==='none'?'▼ フォームを見る':'▲ 閉じる'" style="background:var(--surface2);border:1px solid #333;border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text2);cursor:pointer">▼ フォームを見る</button><div style="display:none;background:var(--surface2);border-radius:6px;padding:10px;margin-top:6px;font-size:13px;color:var(--text2);line-height:1.6">${tips.replace(/
-/g,'<br>')}</div></div>`:'';
+    const tipsHtml=tips?`<div style="margin-bottom:8px"><button onclick="var p=this.nextElementSibling;p.style.display=p.style.display==='none'?'block':'none';this.textContent=p.style.display==='none'?'▼ フォームを見る':'▲ 閉じる'" style="background:var(--surface2);border:1px solid #333;border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text2);cursor:pointer">▼ フォームを見る</button><div style="display:none;background:var(--surface2);border-radius:6px;padding:10px;margin-top:6px;font-size:13px;color:var(--text2);line-height:1.6">${tips.split(String.fromCharCode(10)).join('<br>')}</div></div>`:'';
     return `<div class="session-card"><div class="session-card-header"><div style="font-weight:700;font-size:16px">${ex.name}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--blue)">${fmtNum(vol)} kg</div></div>${tipsHtml}${setsHtml}<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" onclick="addSet(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">＋ セット</button><button class="btn btn-green" onclick="toggleDone(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">完了 ✓</button></div></div>`;
   }).join('');
   const doneCount=sessionExercises.filter(e=>e.done).length;
   finishWrap.innerHTML=`<div class="finish-btn" onclick="finishWorkout()"><div class="f-title">🏁 トレーニング終了</div><div class="f-sub">${doneCount}/${sessionExercises.length} 種目完了 · ${fmtNum(calcTotalVol(sessionExercises))}kg</div></div>`;
   updateVolDisplay();
-}>
+}
+// // SLEEP
+// =====================
+function calcSleepScore(hours,quality,fatigue){let hScore=4;if(hours<7)hScore=Math.max(0,4-(7-hours)*1.5);else if(hours>9)hScore=Math.max(0,4-(hours-9)*1.5);const qScore=quality-1;const fScore=Math.max(0,3-((fatigue-1)/9)*3);return Math.round((hScore+qScore+fScore)*10)/10;}
+function renderSleepScore(){const sleepHistory=DB.get('sleep_history')||[];const todaySleep=sleepHistory.find(r=>r.date===today());const card=document.getElementById('sleep-score-card');if(!todaySleep){card.style.display='none';return;}card.style.display='block';const score=Math.round(calcSleepScore(todaySleep.hours,todaySleep.quality,todaySleep.fatigue)*10)/10;document.getElementById('score-display').textContent=score;let color,comment,barClass;if(score>=8){color='var(--green)';comment='最高の回復状態 🔥';barClass='green';}else if(score>=6){color='var(--yellow)';comment='まずまずの回復 👍';barClass='yellow';}else if(score>=4){color='var(--accent2)';comment='回復不足気味 😐';barClass='red';}else{color='var(--accent)';comment='オーバートレーニング注意！ 💀';barClass='red';}document.getElementById('score-display').style.color=color;document.getElementById('score-comment').textContent=comment;document.getElementById('score-comment').style.color=color;document.getElementById('score-detail').textContent=`睡眠${todaySleep.hours.toFixed(1)}h / 質${todaySleep.quality}/4 / 疲労${todaySleep.fatigue}/10`;document.getElementById('score-bar').className='progress-bar '+barClass;document.getElementById('score-bar').style.width=(score/10*100)+'%';}
+let selectedQuality=4;
+function updateSleepDisplay(){const h=parseFloat(document.getElementById('sleep-hours').value);document.getElementById('sleep-hours-display').textContent=h.toFixed(1)+'h';document.getElementById('sleep-bar').style.width=((h-3)/(12-3)*100)+'%';}
+function selectQuality(q){selectedQuality=q;document.querySelectorAll('.sleep-opt').forEach(el=>el.classList.toggle('selected',parseInt(el.dataset.quality)===q));}
+function updateFatigue(){const val=parseInt(document.getElementById('fatigue-slider').value);const el=document.getElementById('fatigue-display');el.textContent=val;el.style.color=val<=3?'var(--green)':val<=6?'var(--yellow)':'var(--accent)';}
+function saveSleep(){const hours=parseFloat(document.getElementById('sleep-hours').value);const fatigue=parseInt(document.getElementById('fatigue-slider').value);const note=document.getElementById('sleep-note').value.trim();const history=DB.get('sleep_history')||[];const idx=history.findIndex(r=>r.date===today());const rec={hours,quality:selectedQuality,fatigue,note,date:today()};if(idx>=0)history[idx]=rec;else history.push(rec);DB.set('sleep_history',history);toast('✓ 睡眠・疲労記録を保存！');renderSleepHistory();renderSleepScore();renderDashboard();}
+function renderSleepHistory(){const history=(DB.get('sleep_history')||[]).slice(-7).reverse();const el=document.getElementById('sleep-history');if(!history.length){el.innerHTML='<div class="empty-state"><div class="icon">🌙</div>記録がありません</div>';return;}const qualLabel={4:'爆睡😴',3:'まあまあ🙂',2:'浅め😐',1:'最悪😩'};el.innerHTML=history.map(r=>{const score=Math.round(calcSleepScore(r.hours,r.quality,r.fatigue)*10)/10;const scoreColor=score>=8?'var(--green)':score>=6?'var(--yellow)':'var(--accent)';return `<div class="log-item"><div><div class="name">${fmtDateJP(r.date)}</div><div class="detail">${qualLabel[r.quality]||''} ${r.note?'/ '+r.note.slice(0,15):''}</div></div><div style="display:flex;gap:12px;align-items:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px">${r.hours.toFixed(1)}h</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:${scoreColor}">${score}<span style="font-size:12px;color:var(--text2)">/10</span></div></div></div>`;}).join('');}// =====================
+// PROTEIN
+// =====================
+function renderProteinPresets(){document.getElementById('prot-presets').innerHTML=PROT_PRESETS.map(p=>{const gHtml=p.g!=null?`<span class="chip-g">${p.g}g</span>`:`<span class="chip-g empty">g入力</span>`;return `<div class="preset-chip" onclick="selectProtPreset('${p.name}',${p.g??'null'})">${p.name}${gHtml}</div>`;}).join('');}
+function selectProtPreset(name,g){document.getElementById('prot-food').value=name;document.getElementById('prot-amount').value=(g!==null&&g!=='null')?g:'';document.getElementById('prot-amount').focus();}
+function getProteinGoal(){const weights=DB.get('weights')||{};const keys=Object.keys(weights).sort();const latestW=keys.length?weights[keys[keys.length-1]]:70;return Math.round(latestW*(cfg?.proteinFactor||1.6));}
+function saveProtein(){const food=document.getElementById('prot-food').value.trim()||'食事';const g=parseFloat(document.getElementById('prot-amount').value);if(isNaN(g)||g<=0){toast('⚠ タンパク質量を入力してください','#cc3300');return;}const log=DB.get('protein_'+today())||[];log.push({food,g,time:new Date().toTimeString().slice(0,5)});DB.set('protein_'+today(),log);toast(`✓ ${food}: +${g}g 追加！`);document.getElementById('prot-food').value='';document.getElementById('prot-amount').value='';renderProteinToday();renderDashboard();}
+function deleteProtein(idx){const log=DB.get('protein_'+today())||[];log.splice(idx,1);DB.set('protein_'+today(),log);renderProteinToday();renderDashboard();}
+function renderProteinToday(){const log=DB.get('protein_'+today())||[];const goal=getProteinGoal();const total=log.reduce((s,e)=>s+e.g,0);const pct=Math.min(100,Math.round(total/goal*100));document.getElementById('prot-goal-display').textContent=goal+' g';document.getElementById('prot-total-display').textContent=Math.round(total)+' g';document.getElementById('prot-progress-bar').style.width=pct+'%';document.getElementById('prot-pct-display').textContent=pct+'%';const el=document.getElementById('prot-log-list');if(!log.length){el.innerHTML='<div class="empty-state"><div class="icon">🥩</div>食事を追加しましょう</div>';return;}el.innerHTML=[...log].reverse().map((e,i)=>{const realIdx=log.length-1-i;return `<div class="log-item"><div><div class="name">${e.food}</div><div class="detail">${e.time}</div></div><div style="display:flex;align-items:center;gap:8px"><div style="text-align:right"><div class="vol">${e.g}</div><div class="vol-unit">g</div></div><div class="btn-icon" onclick="deleteProtein(${realIdx})">×</div></div></div>`;}).join('');}// =====================
+// WEIGHT
+// =====================
+function saveWeight(){const val=parseFloat(document.getElementById('weight-input').value);if(isNaN(val)||val<20||val>300){toast('⚠ 正しい体重を入力してください','#cc3300');return;}const weights=DB.get('weights')||{};weights[today()]=val;DB.set('weights',weights);toast('✓ 体重を保存しました！');document.getElementById('weight-input').value='';renderWeightHistory();renderDashboard();}
+function renderWeightHistory(){const weights=DB.get('weights')||{};const keys=Object.keys(weights).sort((a,b)=>b.localeCompare(a)).slice(0,14);const el=document.getElementById('weight-history');if(!keys.length){el.innerHTML='<div class="empty-state"><div class="icon">⚖️</div>体重を記録しましょう</div>';return;}el.innerHTML=keys.map((k,i)=>{const prev=i<keys.length-1?weights[keys[i+1]]:null;const diff=prev!=null?fmtNum(weights[k]-prev):null;const diffStr=diff!=null?(diff>0?`<span style="color:var(--accent)">+${diff}kg</span>`:`<span style="color:var(--green)">${diff}kg</span>`):'';return `<div class="log-item"><div><div class="name">${fmtDateJP(k)}</div><div class="detail">${i===0?'本日':'前回比 '+diffStr}</div></div><div style="text-align:right"><div class="vol">${weights[k]}</div><div class="vol-unit">kg</div></div></div>`;}).join('');}init();
+</script>
+</body>
+</html>
