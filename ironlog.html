@@ -775,7 +775,7 @@ function renderCalendar(){
       if(isRest){const rg=muscleGroups.find(g=>g.id==='rest');dotsHtml=`<div class="cal-dot" style="background:${rg?rg.color:'#555'}"></div>`;labelHtml=`<div class="cal-label" style="color:${rg?rg.color:'#555'}">休</div>`;}
       else{dotsHtml=typeIds.map(id=>{const g=muscleGroups.find(x=>x.id===id);return g?`<div class="cal-dot" style="background:${g.color}"></div>`:'';}).join('');const names=typeIds.map(id=>{const g=muscleGroups.find(x=>x.id===id);return g?g.name:'';}).filter(Boolean);labelHtml=names.length<=2?`<div class="cal-label" style="color:var(--text2)">${names.join('・')}</div>`:`<div class="cal-label" style="color:var(--text2)">${names.slice(0,2).join('・')}…</div>`;}
     } else if(hasTrain){dotsHtml=`<div class="cal-dot" style="background:var(--accent)"></div>`;}
-    html+=`<div class="cal-day${isToday?' today':''}" style="background:var(--surface2)" onclick="tapCalDay('${dk}')"><div class="cal-num" style="color:${isToday?'var(--accent)':'var(--text2)'}">${d}</div><div class="cal-dots">${dotsHtml}</div>${labelHtml}</div>`;
+    const protLog=DB.get('protein_'+dk)||[];     const protTotal=protLog.reduce((s,e)=>s+e.g,0);     const protHtml=protTotal>0?`<div style="font-size:8px;color:var(--green);font-weight:700;line-height:1;margin-top:1px">${Math.round(protTotal)}g</div>`:'';     html+=`<div class="cal-day${isToday?' today':''}" style="background:var(--surface2)" onclick="tapCalDay('${dk}')"><div class="cal-num" style="color:${isToday?'var(--accent)':'var(--text2)'}">${d}</div><div class="cal-dots">${dotsHtml}</div>${labelHtml}${protHtml}</div>`;
   }
   html+='</div>';
   // 凡例
