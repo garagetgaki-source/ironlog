@@ -177,6 +177,27 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
 .color-options{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .color-opt{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
 .color-opt.selected{border-color:#fff;transform:scale(1.2)}
+/* 過去日詳細画面 */
+.back-btn{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid #333;border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--text2);font-size:14px;transition:all .15s}
+.back-btn:active{border-color:var(--accent);color:var(--accent)}
+.hist-section{margin-bottom:16px}
+.hist-section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.hist-section-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2)}
+.edit-btn-sm{background:var(--surface2);border:1px solid #333;border-radius:6px;padding:4px 10px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s}
+.edit-btn-sm:active{border-color:var(--accent);color:var(--accent)}
+.edit-btn-sm.active{border-color:var(--accent);color:var(--accent);background:#1a0800}
+.accordion-group{margin-bottom:8px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid #222}
+.accordion-header{display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--surface);cursor:pointer;user-select:none;-webkit-user-select:none;transition:background .15s}
+.accordion-header:active{background:var(--surface2)}
+.accordion-header.open{border-bottom:1px solid #222}
+.accordion-header-left{display:flex;align-items:center;gap:10px}
+.accordion-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.accordion-name{font-weight:700;font-size:16px}
+.accordion-count{font-size:12px;color:var(--text2)}
+.accordion-arrow{font-size:14px;color:var(--text2);transition:transform .2s}
+.accordion-arrow.open{transform:rotate(180deg)}
+.accordion-body{display:none;background:var(--surface);padding:8px}
+.accordion-body.open{display:block}
 </style>
 </head>
 <body>
@@ -394,14 +415,22 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
     </div>
     <div class="section-title">本日の摂取ログ</div>
     <div id="prot-log-list"></div>
-  </div>  <!-- TRAINING -->
+  </div>  <!-- 過去日詳細画面 -->
+  <div class="screen" id="screen-history">
+    <div class="screen-header">
+      <div class="back-btn" onclick="showScreen('dash')">← 戻る</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900" id="history-date-title"></div>
+    </div>
+    <div id="history-content"></div>
+  </div>
+
+  <!-- TRAINING -->
   <div class="screen" id="screen-train">
     <div class="screen-header">
       <div class="screen-title">トレーニング<span>.</span></div>
       <div class="date-badge" id="train-date"></div>
     </div>
-    <div class="cat-tabs" id="cat-tabs"></div>
-    <div id="ex-list"></div>
+    <div id="ex-accordion"></div>
     <div class="ex-add-btn" onclick="openAddModal()">＋ 新しい種目を追加</div>
     <div style="height:1px;background:#222;margin:8px 0 16px"></div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:8px">TODAY'S SESSION</div>
@@ -509,6 +538,85 @@ const DEFAULT_MUSCLE_GROUPS=[
 const COLOR_PALETTE=['#ff3d00','#ff9100','#ffd600','#00e676','#40c4ff','#e040fb','#f06292','#4db6ac','#555555','#90a4ae'];
 function getMuscleGroups(){return DB.get('muscle_groups')||DEFAULT_MUSCLE_GROUPS;}
 function getDayTypes(){return DB.get('day_types')||{};}// =====================
+// 過去日詳細画面
+// =====================
+let histDate=null;
+let histEditMode={};
+let histSelectedQuality=4;
+
+function openHistoryScreen(dk){
+  histDate=dk;histEditMode={weight:false,protein:false,train:false,sleep:false};
+  document.getElementById('history-date-title').textContent=fmtDateJP(dk);
+  renderHistoryContent();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-history').classList.add('active');
+}
+function renderHistoryContent(){
+  const dk=histDate;
+  const weights=DB.get('weights')||{};const protLog=DB.get('protein_'+dk)||[];
+  const trainLog=DB.get('train_'+dk)||[];const sleepHistory=DB.get('sleep_history')||[];
+  const sleepRec=sleepHistory.find(r=>r.date===dk);const dayTypes=getDayTypes();
+  const typeIds=dayTypes[dk]||[];const groups=getMuscleGroups();
+  const qualLabel={4:'爆睡😴',3:'まあまあ🙂',2:'浅め😐',1:'最悪😩'};
+  let html='';
+  // 体重
+  const w=weights[dk];
+  html+=`<div class="hist-section"><div class="hist-section-header"><div class="hist-section-title">⚖️ 体重</div><div class="edit-btn-sm${histEditMode.weight?' active':''}" onclick="toggleHistEdit('weight')">${histEditMode.weight?'✕ 閉じる':'✏️ 編集'}</div></div>`;
+  if(histEditMode.weight){html+=`<div class="card"><div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px"><input class="inp" id="hist-weight-inp" type="number" step="0.1" value="${w||''}" placeholder="70.0" style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:700;text-align:center"><span style="font-size:16px;color:var(--text2)">kg</span></div><button class="btn btn-primary" onclick="saveHistWeight()">保存 💾</button>${w?'<button class="btn btn-danger" onclick="deleteHistWeight()" style="margin-top:6px">削除</button>':''}</div>`;}
+  else{html+=`<div class="card"><div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:700">${w?w+'<span style="font-size:16px;color:var(--text2)"> kg</span>':'<span style="color:var(--text3);font-size:16px">未記録</span>'}</div></div>`;}
+  html+=`</div>`;
+  // タンパク質
+  const protTotal=Math.round(protLog.reduce((s,e)=>s+e.g,0));
+  html+=`<div class="hist-section"><div class="hist-section-header"><div class="hist-section-title">💊 タンパク質</div><div class="edit-btn-sm${histEditMode.protein?' active':''}" onclick="toggleHistEdit('protein')">${histEditMode.protein?'✕ 閉じる':'✏️ 編集'}</div></div>`;
+  if(histEditMode.protein){html+=`<div class="card"><div class="card-label">追加</div><input class="inp" id="hist-prot-food" placeholder="食材・食事名" style="margin-bottom:8px"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input class="inp" id="hist-prot-g" type="number" step="1" placeholder="g数" style="flex:1"><span style="color:var(--text2)">g</span></div><button class="btn btn-primary" onclick="addHistProtein()">追加 ＋</button></div>`;if(protLog.length){html+=`<div class="card"><div class="card-label">ログ（タップで削除）</div>`+protLog.map((e,i)=>`<div class="log-item" style="cursor:pointer" onclick="deleteHistProtein(${i})"><div><div class="name">${e.food}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="vol">${e.g}</div><div class="vol-unit">g</div><div class="btn-icon">×</div></div></div>`).join('')+`</div>`;}}
+  else{html+=`<div class="card"><div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:700;color:var(--green)">${protTotal>0?protTotal+'<span style="font-size:16px;color:var(--text2)"> g</span>':'<span style="color:var(--text3);font-size:16px">未記録</span>'}</div>${protLog.length?protLog.map(e=>`<div style="font-size:13px;color:var(--text2);margin-top:4px">${e.food} ${e.g}g</div>`).join(''):''}</div>`;}
+  html+=`</div>`;
+  // トレーニング
+  const vol=calcTotalVol(trainLog);
+  const typeBadges=typeIds.map(id=>{const g=groups.find(x=>x.id===id);return g?`<div style="display:inline-flex;align-items:center;gap:4px;background:${g.color}22;border:1px solid ${g.color};border-radius:6px;padding:3px 8px;margin:2px"><div style="width:8px;height:8px;border-radius:50%;background:${g.color}"></div><span style="font-size:12px;color:${g.color};font-weight:700">${g.name}</span></div>`:''}).join('');
+  html+=`<div class="hist-section"><div class="hist-section-header"><div class="hist-section-title">🏋️ トレーニング</div><div class="edit-btn-sm${histEditMode.train?' active':''}" onclick="toggleHistEdit('train')">${histEditMode.train?'✕ 閉じる':'✏️ 編集'}</div></div>`;
+  if(histEditMode.train){
+    html+=`<div class="card"><div class="card-label">部位</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">${groups.map(g=>`<div onclick="toggleHistMuscle('${g.id}')" style="display:inline-flex;align-items:center;gap:4px;background:${typeIds.includes(g.id)?g.color+'33':'var(--surface2)'};border:2px solid ${typeIds.includes(g.id)?g.color:'#333'};border-radius:6px;padding:6px 10px;cursor:pointer"><div style="width:8px;height:8px;border-radius:50%;background:${g.color}"></div><span style="font-size:12px;font-weight:700;color:${typeIds.includes(g.id)?g.color:'var(--text2)'}">${g.name}</span></div>`).join('')}</div></div>`;
+    if(trainLog.length){html+=trainLog.map((ex,ei)=>{const exVol=ex.sets.reduce((s,set)=>s+(set.weight*set.reps),0);const setsHtml=ex.sets.map((set,si)=>`<div class="set-row"><div class="set-num">${si+1}</div><input class="inp" type="number" step="0.5" placeholder="重量kg" value="${set.weight||''}" oninput="updateHistSet(${ei},${si},'weight',this.value)" style="height:40px;font-size:15px;text-align:center"><input class="inp" type="number" step="1" placeholder="回数" value="${set.reps||''}" oninput="updateHistSet(${ei},${si},'reps',this.value)" style="height:40px;font-size:15px;text-align:center"><div class="btn-icon" onclick="removeHistSet(${ei},${si})">×</div></div>`).join('');return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:700">${ex.name}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--blue)">${fmtNum(exVol)}kg</div></div>${setsHtml}<button class="btn btn-secondary" onclick="addHistSet(${ei})" style="margin-top:6px;padding:8px;font-size:14px">＋ セット</button></div>`;}).join('');}
+    else{html+=`<div class="card"><div style="color:var(--text3);font-size:14px">トレーニング記録なし</div></div>`;}
+  } else {
+    html+=`<div class="card">`;if(typeBadges)html+=`<div style="margin-bottom:8px">${typeBadges}</div>`;
+    if(trainLog.length){html+=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;color:var(--blue);margin-bottom:8px">${fmtNum(vol)}<span style="font-size:14px;color:var(--text2)"> kg</span></div>`;html+=trainLog.map(ex=>`<div style="font-size:13px;color:var(--text2);margin-top:2px">${ex.name} ${ex.sets.length}セット</div>`).join('');}
+    else if(typeIds.length===0){html+=`<div style="color:var(--text3);font-size:14px">未記録</div>`;}
+    html+=`</div>`;
+  }
+  html+=`</div>`;
+  // 睡眠
+  html+=`<div class="hist-section"><div class="hist-section-header"><div class="hist-section-title">🌙 睡眠/疲労</div><div class="edit-btn-sm${histEditMode.sleep?' active':''}" onclick="toggleHistEdit('sleep')">${histEditMode.sleep?'✕ 閉じる':'✏️ 編集'}</div></div>`;
+  if(histEditMode.sleep){
+    const sh=sleepRec?sleepRec.hours:7;const sq=sleepRec?sleepRec.quality:4;const sf=sleepRec?sleepRec.fatigue:3;const sn=sleepRec?sleepRec.note||'':'';
+    html+=`<div class="card"><div class="card-label">睡眠時間</div><div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><input type="range" id="hist-sleep-h" min="3" max="12" step="0.5" value="${sh}" oninput="document.getElementById('hist-sleep-h-disp').textContent=parseFloat(this.value).toFixed(1)+'h'" style="flex:1"><div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:700;min-width:70px;text-align:center" id="hist-sleep-h-disp">${sh.toFixed(1)}h</div></div><div class="card-label" style="margin-top:8px">睡眠の質</div><div class="sleep-grid"><div class="sleep-opt${sq===4?' selected':''}" onclick="selectHistQuality(4)"><div class="emoji">😴</div>爆睡</div><div class="sleep-opt${sq===3?' selected':''}" onclick="selectHistQuality(3)"><div class="emoji">🙂</div>まあまあ</div><div class="sleep-opt${sq===2?' selected':''}" onclick="selectHistQuality(2)"><div class="emoji">😐</div>浅め</div><div class="sleep-opt${sq===1?' selected':''}" onclick="selectHistQuality(1)"><div class="emoji">😩</div>最悪</div></div><div class="card-label" style="margin-top:8px">疲労度（1=元気 / 10=限界）</div><input type="range" id="hist-fatigue" min="1" max="10" step="1" value="${sf}" style="width:100%;margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>元気 💪</span><span id="hist-fatigue-val" style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700">${sf}</span><span>限界 💀</span></div><input class="inp" id="hist-sleep-note" placeholder="メモ..." value="${sn}" style="margin-top:8px"><button class="btn btn-primary" onclick="saveHistSleep()" style="margin-top:8px">保存 💾</button>${sleepRec?'<button class="btn btn-danger" onclick="deleteHistSleep()" style="margin-top:6px">削除</button>':''}</div>`;
+  } else {
+    html+=`<div class="card">`;
+    if(sleepRec){const score=Math.round(calcSleepScore(sleepRec.hours,sleepRec.quality,sleepRec.fatigue)*10)/10;const scoreColor=score>=8?'var(--green)':score>=6?'var(--yellow)':'var(--accent)';html+=`<div style="display:flex;gap:16px;align-items:center"><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:700">${sleepRec.hours.toFixed(1)}<span style="font-size:14px;color:var(--text2)">h</span></div><div style="font-size:12px;color:var(--text2)">${qualLabel[sleepRec.quality]||''}</div></div><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:700;color:${scoreColor}">${score}<span style="font-size:14px;color:var(--text2)">/10点</span></div><div style="font-size:12px;color:var(--text2)">疲労:${sleepRec.fatigue}/10</div></div></div>`;if(sleepRec.note)html+=`<div style="font-size:13px;color:var(--text2);margin-top:8px">${sleepRec.note}</div>`;}
+    else{html+=`<div style="color:var(--text3);font-size:14px">未記録</div>`;}
+    html+=`</div>`;
+  }
+  html+=`</div>`;
+  document.getElementById('history-content').innerHTML=html;
+  const fatSlider=document.getElementById('hist-fatigue');
+  if(fatSlider){fatSlider.addEventListener('input',()=>{const el=document.getElementById('hist-fatigue-val');if(el)el.textContent=fatSlider.value;});}
+}
+function selectHistQuality(q){histSelectedQuality=q;document.querySelectorAll('#history-content .sleep-opt').forEach(el=>{el.classList.toggle('selected',parseInt(el.getAttribute('onclick').match(/\d+/)[0])===q);});}
+function toggleHistEdit(section){histEditMode[section]=!histEditMode[section];if(section==='sleep'&&histEditMode.sleep){const sleepHistory=DB.get('sleep_history')||[];const rec=sleepHistory.find(r=>r.date===histDate);histSelectedQuality=rec?rec.quality:4;}renderHistoryContent();}
+function saveHistWeight(){const val=parseFloat(document.getElementById('hist-weight-inp').value);if(isNaN(val)||val<20||val>300){toast('⚠ 正しい体重を入力してください','#cc3300');return;}const weights=DB.get('weights')||{};weights[histDate]=val;DB.set('weights',weights);histEditMode.weight=false;renderHistoryContent();renderDashboard();toast('✓ 体重を保存しました！');}
+function deleteHistWeight(){if(!confirm('体重記録を削除しますか？'))return;const weights=DB.get('weights')||{};delete weights[histDate];DB.set('weights',weights);histEditMode.weight=false;renderHistoryContent();renderDashboard();toast('削除しました');}
+function addHistProtein(){const food=document.getElementById('hist-prot-food').value.trim()||'食事';const g=parseFloat(document.getElementById('hist-prot-g').value);if(isNaN(g)||g<=0){toast('⚠ g数を入力してください','#cc3300');return;}const log=DB.get('protein_'+histDate)||[];log.push({food,g,time:''});DB.set('protein_'+histDate,log);renderHistoryContent();renderDashboard();toast(`✓ ${food}: +${g}g 追加！`);}
+function deleteHistProtein(idx){const log=DB.get('protein_'+histDate)||[];log.splice(idx,1);DB.set('protein_'+histDate,log);renderHistoryContent();renderDashboard();toast('削除しました');}
+function toggleHistMuscle(id){const dt=getDayTypes();const typeIds=dt[histDate]||[];const newIds=typeIds.includes(id)?typeIds.filter(x=>x!==id):[...typeIds,id];if(newIds.length===0){delete dt[histDate];}else{dt[histDate]=newIds;}DB.set('day_types',dt);renderHistoryContent();renderDashboard();}
+function updateHistSet(exIdx,setIdx,field,val){const log=DB.get('train_'+histDate)||[];log[exIdx].sets[setIdx][field]=parseFloat(val)||0;DB.set('train_'+histDate,log);renderDashboard();}
+function addHistSet(exIdx){const log=DB.get('train_'+histDate)||[];log[exIdx].sets.push({weight:0,reps:0});DB.set('train_'+histDate,log);renderHistoryContent();}
+function removeHistSet(exIdx,setIdx){const log=DB.get('train_'+histDate)||[];if(log[exIdx].sets.length<=1)log.splice(exIdx,1);else log[exIdx].sets.splice(setIdx,1);DB.set('train_'+histDate,log);renderHistoryContent();renderDashboard();}
+function saveHistSleep(){const hours=parseFloat(document.getElementById('hist-sleep-h').value);const fatigue=parseInt(document.getElementById('hist-fatigue').value);const note=document.getElementById('hist-sleep-note').value.trim();const history=DB.get('sleep_history')||[];const idx=history.findIndex(r=>r.date===histDate);const rec={hours,quality:histSelectedQuality,fatigue,note,date:histDate};if(idx>=0)history[idx]=rec;else history.push(rec);DB.set('sleep_history',history);histEditMode.sleep=false;renderHistoryContent();renderDashboard();toast('✓ 睡眠記録を保存！');}
+function deleteHistSleep(){if(!confirm('睡眠記録を削除しますか？'))return;const history=(DB.get('sleep_history')||[]).filter(r=>r.date!==histDate);DB.set('sleep_history',history);histEditMode.sleep=false;renderHistoryContent();renderDashboard();toast('削除しました');}
+
+// =====================
 // 今日どうする？モーダル
 // =====================
 function openTodayModal(){
@@ -787,8 +895,8 @@ function renderCalendar(){
 function prevMonth(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
 function nextMonth(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
 function tapCalDay(dk){
-  // 今日以外はそのまま、今日はモーダルを開く
   if(dk===today()){openTodayModal();}
+  else{openHistoryScreen(dk);}
 }// =====================
 // DASHBOARD
 // =====================
@@ -859,12 +967,11 @@ function renderDashboard(){
 // =====================
 function renderCatTabs(){
   const groups=getMuscleGroups().filter(g=>g.id!=='rest');
-  const cats=['全て',...groups.map(g=>g.name)];
-  document.getElementById('cat-tabs').innerHTML=cats.map(c=>`<div class="cat-tab${c===currentCat?' active':''}" onclick="selectCat('${c}')">${c}</div>`).join('');
   const sel=document.getElementById('new-ex-cat');
   if(sel){const cur=sel.value;sel.innerHTML=groups.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');if(cur)sel.value=cur;}
+  renderExList();
 }
-function selectCat(cat){currentCat=cat;renderCatTabs();renderExList();}// =====================
+function selectCat(cat){currentCat=cat;renderExList();}// =====================
 // PR / HISTORY
 // =====================
 function getPR(exName){let pr=null;Object.keys(localStorage).filter(k=>k.startsWith('ironlog_train_')).forEach(k=>{try{const date=k.replace('ironlog_train_','');JSON.parse(localStorage.getItem(k)||'[]').forEach(ex=>{if(ex.name===exName)ex.sets.forEach(set=>{if(set.weight>0&&set.reps>0&&(!pr||set.weight>pr.weight||(set.weight===pr.weight&&set.reps>pr.reps)))pr={weight:set.weight,reps:set.reps,date};});});}catch(e){}});return pr;}
@@ -872,18 +979,29 @@ function getExHistory(exName){const hist=[];Object.keys(localStorage).filter(k=>
 // EXERCISE LIST
 // =====================
 function renderExList(){
-  const exercises=getExercises();const groups=getMuscleGroups();
-  const filtered=currentCat==='全て'?exercises:exercises.filter(e=>e.cat===currentCat);
-  const el=document.getElementById('ex-list');
-  if(!filtered.length){el.innerHTML='<div class="empty-state" style="padding:20px"><div class="icon">🏋️</div>種目がありません</div>';return;}
-  el.innerHTML=filtered.map(ex=>{
-    const pr=getPR(ex.name);const isEditing=editingExName===ex.name;
-    const mg=groups.find(g=>g.name===ex.cat);const catColor=mg?mg.color:'#999';
-    const prHtml=pr?`<div><div class="ex-card-pr">${pr.weight}kg × ${pr.reps}回</div><div class="ex-card-pr-date">${fmtDateJP(pr.date)}</div></div>`:`<div style="font-size:12px;color:var(--text3)">記録なし</div>`;
-    const editHtml=isEditing?`<div class="edit-form" onclick="event.stopPropagation()"><div style="font-size:11px;color:var(--gold);margin-bottom:4px">✏️ 編集モード</div><select class="inp" id="edit-cat-${safeid(ex.name)}" style="font-size:14px;padding:10px 12px">${groups.filter(g=>g.id!=='rest').map(g=>`<option value="${g.name}"${ex.cat===g.name?' selected':''}>${g.name}</option>`).join('')}</select><textarea class="inp" id="edit-tips-${safeid(ex.name)}" rows="4" style="resize:none;font-size:14px;padding:10px 12px" placeholder="フォームのポイント...">${ex.tips||''}</textarea><input class="inp" id="edit-yt-${safeid(ex.name)}" placeholder="YouTube URL" value="${ex.yt||''}" style="font-size:14px;padding:10px 12px"><div style="display:flex;gap:8px"><button class="btn btn-green" onclick="saveExEdit('${esc(ex.name)}')" style="flex:1;padding:10px;font-size:15px;margin-top:0">保存 ✓</button><button class="btn btn-danger" onclick="deleteExercise('${esc(ex.name)}')" style="flex:1;padding:10px;font-size:15px;margin-top:0">削除 🗑</button></div></div>`:'';
-    return `<div class="ex-card${isEditing?' edit-mode':''}" ontouchstart="startLongPress('${esc(ex.name)}')" ontouchend="cancelLongPress()" ontouchmove="cancelLongPress()" onmousedown="startLongPress('${esc(ex.name)}')" onmouseup="cancelLongPress()" onmouseleave="cancelLongPress()" onclick="handleExCardClick('${esc(ex.name)}')"><div class="ex-card-top"><div><div class="ex-card-name">${ex.name}</div><div style="font-size:11px;color:${catColor};margin-top:2px">● ${ex.cat}${isEditing?' ✏️':''}</div></div><div style="text-align:right">${prHtml}</div></div>${editHtml}</div>`;
+  const exercises=getExercises();const groups=getMuscleGroups().filter(g=>g.id!=='rest');
+  const el=document.getElementById('ex-accordion');
+  if(!el)return;
+  if(!groups.length){el.innerHTML='<div class="empty-state" style="padding:20px"><div class="icon">🏋️</div>部位がありません</div>';return;}
+  el.innerHTML=groups.map(g=>{
+    const exInGroup=exercises.filter(e=>e.cat===g.name);
+    const isOpen=openAccordions.has(g.name);
+    const exHtml=exInGroup.map(ex=>{
+      const pr=getPR(ex.name);const isEditing=editingExName===ex.name;
+      const prHtml=pr?`<div><div class="ex-card-pr">${pr.weight}kg × ${pr.reps}回</div><div class="ex-card-pr-date">${fmtDateJP(pr.date)}</div></div>`:`<div style="font-size:12px;color:var(--text3)">記録なし</div>`;
+      const editHtml=isEditing?`<div class="edit-form" onclick="event.stopPropagation()"><div style="font-size:11px;color:var(--gold);margin-bottom:4px">✏️ 編集モード</div><select class="inp" id="edit-cat-${safeid(ex.name)}" style="font-size:14px;padding:10px 12px">${groups.map(g2=>`<option value="${g2.name}"${ex.cat===g2.name?' selected':''}>${g2.name}</option>`).join('')}</select><textarea class="inp" id="edit-tips-${safeid(ex.name)}" rows="4" style="resize:none;font-size:14px;padding:10px 12px" placeholder="フォームのポイント...">${ex.tips||''}</textarea><input class="inp" id="edit-yt-${safeid(ex.name)}" placeholder="YouTube URL" value="${ex.yt||''}" style="font-size:14px;padding:10px 12px"><div style="display:flex;gap:8px"><button class="btn btn-green" onclick="saveExEdit('${esc(ex.name)}')" style="flex:1;padding:10px;font-size:15px;margin-top:0">保存 ✓</button><button class="btn btn-danger" onclick="deleteExercise('${esc(ex.name)}')" style="flex:1;padding:10px;font-size:15px;margin-top:0">削除 🗑</button></div></div>`:'';
+      return `<div class="ex-card${isEditing?' edit-mode':''}" ontouchstart="startLongPress('${esc(ex.name)}')" ontouchend="cancelLongPress()" ontouchmove="cancelLongPress()" onmousedown="startLongPress('${esc(ex.name)}')" onmouseup="cancelLongPress()" onmouseleave="cancelLongPress()" onclick="handleExCardClick('${esc(ex.name)}')"><div class="ex-card-top"><div><div class="ex-card-name">${ex.name}</div></div><div style="text-align:right">${prHtml}</div></div>${editHtml}</div>`;
+    }).join('');
+    return `<div class="accordion-group"><div class="accordion-header${isOpen?' open':''}" onclick="toggleAccordion('${esc(g.name)}')"><div class="accordion-header-left"><div class="accordion-dot" style="background:${g.color}"></div><div class="accordion-name">${g.name}</div><div class="accordion-count">${exInGroup.length}種目</div></div><div class="accordion-arrow${isOpen?' open':''}">▼</div></div><div class="accordion-body${isOpen?' open':''}">${exHtml||'<div style="color:var(--text3);font-size:13px;padding:8px">種目がありません</div>'}</div></div>`;
   }).join('');
 }
+let openAccordions=new Set();
+function toggleAccordion(name){
+  if(openAccordions.has(name))openAccordions.delete(name);
+  else openAccordions.add(name);
+  renderExList();
+}
+
 function safeid(name){return name.replace(/[^a-zA-Z0-9]/g,'_');}
 function esc(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 function startLongPress(name){cancelLongPress();longPressTimer=setTimeout(()=>{editingExName=editingExName===name?null:name;renderExList();if(editingExName)toast('長押しで編集モード 📝','#333');},600);}
