@@ -198,6 +198,12 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
 .accordion-arrow.open{transform:rotate(180deg)}
 .accordion-body{display:none;background:var(--surface);padding:8px}
 .accordion-body.open{display:block}
+.timer-wrap{display:flex;align-items:center;gap:10px;margin-top:8px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid #333}
+.timer-display{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;min-width:72px;line-height:1}
+.timer-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;flex-shrink:0}
+.timer-btn.running{background:#555;color:#fff}
+.timer-msg{margin-top:8px;padding:10px 12px;background:#1a1000;border:1px solid #ff9100;border-radius:8px;font-size:13px;line-height:1.6;color:#ffcc80}
+.timer-msg.loading{color:var(--text2);border-color:#333;background:var(--surface2)}
 </style>
 </head>
 <body>
@@ -801,6 +807,56 @@ function importData(event){
 }// =====================
 // ONBOARD / INIT
 // =====================
+// =====================
+// インターバルタイマー
+// =====================
+const TIMER_MSGS=[
+  '次のセット、絶対できる 💪','筋肉は今まさに成長している 🔥','インターバルも練習のうち。集中 👁️',
+  'もう一度やり切れ。それだけだ ⚡','限界を超えるのが筋トレの本質 💥','呼吸を整えろ。次が本番 🌬️',
+  '疲れた時こそ、成長のチャンス 📈','最後まで諦めない奴が強くなる 🦾','今日の頑張りが明日の自分を作る 🏆',
+  'セット間の休息も大事。しっかり回復 🧘','筋肥大には十分な休息が必要。焦るな ⏱️','ネガティブ動作もゆっくり意識して 🎯',
+];
+function fmtTimer(s){const m=Math.floor(s/60);const ss=s%60;return m>0?`${m}:${String(ss).padStart(2,'0')}`:`${ss}s`;}
+function startTimer(ei){
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+  if(timerExIdx===ei){timerExIdx=null;timerSecs=0;timerMsgCache='';renderTrainExercises();return;}
+  timerExIdx=ei;timerSecs=0;timerMsgCache='';
+  const fixed=TIMER_MSGS[Math.floor(Math.random()*TIMER_MSGS.length)];
+  timerMsgCache='<span style="opacity:0.6">AI生成中...</span>';
+  renderTrainExercises();
+  timerInterval=setInterval(()=>{timerSecs++;updateTimerDisplay();},1000);
+  fetchTimerMsg(ei,fixed);
+}
+function updateTimerDisplay(){
+  const el=document.getElementById('timer-display-'+timerExIdx);
+  if(el)el.textContent=fmtTimer(timerSecs);
+}
+async function fetchTimerMsg(ei,fallback){
+  loadTodayTraining();
+  const exName=sessionExercises[ei]?sessionExercises[ei].name:'';
+  const msgEl=document.getElementById('timer-msg-'+ei);
+  if(msgEl)msgEl.innerHTML='<span style="opacity:0.6">✨ AIメッセージ生成中...</span>';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',max_tokens:120,
+        messages:[{role:'user',content:`筋トレ中のインターバル休憩中に表示する、やる気が出る短い日本語メッセージを1つだけ作って。種目は「${exName}」。筋トレTIPSか応援メッセージで、2〜3文、絵文字あり。余計な前置き不要。`}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content&&data.content[0]?data.content[0].text:fallback;
+    timerMsgCache=text;
+    const el=document.getElementById('timer-msg-'+timerExIdx);
+    if(el)el.innerHTML=text;
+  }catch(e){
+    timerMsgCache=fallback;
+    const el=document.getElementById('timer-msg-'+timerExIdx);
+    if(el)el.innerHTML=fallback;
+  }
+}
+
 function startApp(){
   const name=document.getElementById('ob-name').value.trim()||'トレーニー';
   const weight=parseFloat(document.getElementById('ob-weight').value)||70;
@@ -996,6 +1052,7 @@ function renderExList(){
   }).join('');
 }
 let openAccordions=new Set();
+let openTipsSet=new Set();
 function toggleAccordion(name){
   if(openAccordions.has(name))openAccordions.delete(name);
   else openAccordions.add(name);
@@ -1003,6 +1060,7 @@ function toggleAccordion(name){
 }
 
 function safeid(name){return name.replace(/[^a-zA-Z0-9]/g,'_');}
+function toggleTips(exName,e){e.stopPropagation();if(openTipsSet.has(exName))openTipsSet.delete(exName);else openTipsSet.add(exName);renderTrainExercises();}
 function esc(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 function startLongPress(name){cancelLongPress();longPressTimer=setTimeout(()=>{editingExName=editingExName===name?null:name;renderExList();if(editingExName)toast('長押しで編集モード 📝','#333');},600);}
 function cancelLongPress(){if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;}}
@@ -1053,6 +1111,10 @@ const PROT_PRESETS=[
 // SESSION
 // =====================
 let sessionExercises=[];
+let timerExIdx=null;
+let timerInterval=null;
+let timerSecs=0;
+let timerMsgCache='';
 function loadTodayTraining(){sessionExercises=DB.get('train_'+today())||[];}
 function addExToSession(name){loadTodayTraining();if(sessionExercises.find(e=>e.name===name)){toast('⚠ すでに追加済みです','#cc3300');return;}sessionExercises.push({name,sets:[{weight:0,reps:0}],done:false});DB.set('train_'+today(),sessionExercises);renderTrainExercises();toast('✓ '+name+' をセッションに追加！');}
 function addSet(exIdx){loadTodayTraining();sessionExercises[exIdx].sets.push({weight:0,reps:0});DB.set('train_'+today(),sessionExercises);renderTrainExercises();}
@@ -1074,8 +1136,11 @@ function renderTrainExercises(){
       return `<div class="session-card done" style="padding:12px 16px"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:700;font-size:15px;color:var(--text2)">${ex.name}</div><div style="display:flex;align-items:center;gap:8px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;color:var(--text3)">${fmtNum(vol)}kg</div><div class="done-badge">✓</div><button onclick="toggleDone(${ei})" style="background:transparent;border:1px solid #333;border-radius:6px;color:var(--text2);padding:3px 8px;font-size:11px;cursor:pointer">戻す</button></div></div></div>`;
     }
     const setsHtml=ex.sets.map((set,si)=>`<div class="set-row"><div class="set-num">${si+1}</div><input class="inp" type="number" step="0.5" placeholder="重量kg" value="${set.weight||''}" oninput="updateSet(${ei},${si},'weight',this.value)" style="height:40px;font-size:15px;text-align:center"><input class="inp" type="number" step="1" placeholder="回数" value="${set.reps||''}" oninput="updateSet(${ei},${si},'reps',this.value)" style="height:40px;font-size:15px;text-align:center"><div class="btn-icon" onclick="removeSet(${ei},${si})">×</div></div>`).join('');
-    const tipsHtml=tips?`<div style="margin-bottom:8px"><button onclick="var p=this.nextElementSibling;p.style.display=p.style.display==='none'?'block':'none';this.textContent=p.style.display==='none'?'▼ フォームを見る':'▲ 閉じる'" style="background:var(--surface2);border:1px solid #333;border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text2);cursor:pointer">▼ フォームを見る</button><div style="display:none;background:var(--surface2);border-radius:6px;padding:10px;margin-top:6px;font-size:13px;color:var(--text2);line-height:1.6">${tips.split(String.fromCharCode(10)).join('<br>')}</div></div>`:'';
-    return `<div class="session-card"><div class="session-card-header"><div style="font-weight:700;font-size:16px">${ex.name}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--blue)">${fmtNum(vol)} kg</div></div>${tipsHtml}${setsHtml}<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" onclick="addSet(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">＋ セット</button><button class="btn btn-green" onclick="toggleDone(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">完了 ✓</button></div></div>`;
+    const tipsOpen=openTipsSet.has(ex.name);
+    const tipsHtml=tips?`<div style="margin-bottom:8px"><button onclick="toggleTips('${esc(ex.name)}',event)" style="background:var(--surface2);border:1px solid #333;border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text2);cursor:pointer">${tipsOpen?'▲ 閉じる':'▼ フォームを見る'}</button><div style="display:${tipsOpen?'block':'none'};background:var(--surface2);border-radius:6px;padding:10px;margin-top:6px;font-size:13px;color:#f0f0f0;line-height:1.6">${tips.split(String.fromCharCode(10)).join('<br>')}</div></div>`:'';
+    const isTimerRunning=timerExIdx===ei;
+    const timerHtml=`<div class="timer-wrap"><div class="timer-display" id="timer-display-${ei}">${isTimerRunning?fmtTimer(timerSecs):'0s'}</div><button class="timer-btn${isTimerRunning?' running':''}" onclick="startTimer(${ei})">${isTimerRunning?'■ STOP':'▶ START'}</button></div>${isTimerRunning?`<div class="timer-msg" id="timer-msg-${ei}">${timerMsgCache}</div>`:''}`;
+    return `<div class="session-card"><div class="session-card-header"><div style="font-weight:700;font-size:16px">${ex.name}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--blue)">${fmtNum(vol)} kg</div></div>${tipsHtml}${setsHtml}${timerHtml}<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" onclick="addSet(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">＋ セット</button><button class="btn btn-green" onclick="toggleDone(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">完了 ✓</button></div></div>`;
   }).join('');
   const doneCount=sessionExercises.filter(e=>e.done).length;
   finishWrap.innerHTML=`<div class="finish-btn" onclick="finishWorkout()"><div class="f-title">🏁 トレーニング終了</div><div class="f-sub">${doneCount}/${sessionExercises.length} 種目完了 · ${fmtNum(calcTotalVol(sessionExercises))}kg</div></div>`;
