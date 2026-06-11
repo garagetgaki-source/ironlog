@@ -283,6 +283,11 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
         <div class="btn btn-secondary" style="text-align:center;cursor:pointer;margin-top:0">📥 データをインポート</div>
         <input type="file" accept=".json" onchange="importData(event)" style="display:none">
       </label>
+      <!-- バージョン情報 -->
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid #222;text-align:center">
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">アプリバージョン</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--text2)" id="settings-version">確認中...</div>
+      </div>
     </div>
   </div>  <!-- 種目詳細モーダル -->
   <div class="modal-overlay" id="ex-modal">
@@ -766,6 +771,18 @@ function openSettingsModal(){
   document.getElementById('cfg-goal').value=cfg.weightGoal;
   document.getElementById('cfg-factor').value=cfg.proteinFactor;
   renderMuscleEditList();
+  // SW経由でキャッシュ名を取得
+  if('serviceWorker' in navigator&&navigator.serviceWorker.controller){
+    const mc=new MessageChannel();
+    mc.port1.onmessage=e=>{
+      const el=document.getElementById('settings-version');
+      if(el)el.textContent=e.data||'不明';
+    };
+    navigator.serviceWorker.controller.postMessage({type:'GET_VERSION'},[ mc.port2]);
+  } else {
+    const el=document.getElementById('settings-version');
+    if(el)el.textContent='SW未登録';
+  }
   document.getElementById('settings-modal').classList.add('open');
 }
 function closeSettingsModal(){document.getElementById('settings-modal').classList.remove('open');}
