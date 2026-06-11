@@ -843,35 +843,32 @@ const SESSION_MOTIV_MSGS=[
 async function startSessionMotivation(){
   if(motivFetched)return;
   motivFetched=true;
-  motivMsgs=[SESSION_MOTIV_MSGS[Math.floor(Math.random()*SESSION_MOTIV_MSGS.length)]];
-  motivIdx=0;
-  showMotivMsg();
+  // まず固定メッセージを即表示
+  showMotivMsg(SESSION_MOTIV_MSGS[Math.floor(Math.random()*SESSION_MOTIV_MSGS.length)]);
+  // 5秒ごとにAIで新しいメッセージを生成
   if(motivInterval)clearInterval(motivInterval);
-  motivInterval=setInterval(()=>{
-    motivIdx=(motivIdx+1)%Math.max(1,motivMsgs.length);
-    showMotivMsg();
-  },5000);
-  // AI生成でメッセージを補充
+  motivInterval=setInterval(()=>fetchAndShowMotiv(),5000);
+}
+async function fetchAndShowMotiv(){
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',max_tokens:300,
-        messages:[{role:'user',content:'筋トレセッション開始時に表示するモチベーションメッセージを5つ作って。日本語、短め（1〜2文）、絵文字あり、熱くなれるもの。JSON配列のみ返すこと。例：["メッセージ1","メッセージ2"]'}]
+        model:'claude-sonnet-4-20250514',max_tokens:80,
+        messages:[{role:'user',content:'筋トレセッション中に表示する、モチベが上がる短い日本語メッセージを1つだけ作って。1〜2文、絵文字あり、熱くなれるもの。メッセージ本文のみ返すこと。'}]
       })
     });
     const data=await res.json();
-    const text=data.content&&data.content[0]?data.content[0].text:'[]';
-    const clean=text.replace(/```json|```/g,'').trim();
-    const arr=JSON.parse(clean);
-    if(Array.isArray(arr)&&arr.length){motivMsgs=[...SESSION_MOTIV_MSGS,...arr];}
-  }catch(e){}
+    const text=data.content&&data.content[0]?data.content[0].text.trim():'';
+    if(text)showMotivMsg(text);
+  }catch(e){
+    showMotivMsg(SESSION_MOTIV_MSGS[Math.floor(Math.random()*SESSION_MOTIV_MSGS.length)]);
+  }
 }
-function showMotivMsg(){
+function showMotivMsg(msg){
   const el=document.getElementById('session-motivation');
   if(!el)return;
-  const msg=motivMsgs[motivIdx%motivMsgs.length]||'';
   el.style.display='block';
   el.innerHTML=`<div class="session-motiv">${msg}</div>`;
 }
@@ -908,7 +905,7 @@ async function fetchTimerMsg(ei,fallback){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',max_tokens:120,
-        messages:[{role:'user',content:`筋トレ中のインターバル休憩中に表示する、やる気が出る短い日本語メッセージを1つだけ作って。種目は「${exName}」。筋トレTIPSか応援メッセージで、2〜3文、絵文字あり。余計な前置き不要。`}]
+        messages:[{role:'user',content:`筋トレのインターバル休憩中に表示する日本語メッセージを1つだけ作って。種目は「${exName}」。インターバル中に実践できる有益なTIPS（呼吸法・ストレッチ・次セットの意識など）とモチベが上がる一言を組み合わせて。2〜3文、絵文字あり。本文のみ返すこと。`}]
       })
     });
     const data=await res.json();
