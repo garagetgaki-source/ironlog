@@ -32,3 +32,9 @@ self.addEventListener('fetch', e => {
       .catch(() => caches.match(e.request))
   );
 });
+
+self.addEventListener('message', e => {
+  if(e.data && e.data.type === 'GET_VERSION'){
+    e.ports[0].postMessage(CACHE_NAME);
+  }
+});
