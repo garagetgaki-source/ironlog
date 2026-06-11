@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ironlog-v19';
+const CACHE_NAME = 'ironlog-v20';
 const ASSETS = [
   './ironlog.html',
   './manifest.json',
@@ -22,6 +22,12 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // APIリクエストはService Workerを通さない
+  if(e.request.url.includes('api.anthropic.com') || 
+     e.request.url.includes('fonts.googleapis.com') ||
+     e.request.url.includes('fonts.gstatic.com')){
+    return;
+  }
   e.respondWith(
     fetch(e.request)
       .then(res => {
