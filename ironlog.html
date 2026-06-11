@@ -728,10 +728,7 @@ function closeTodayModal(){
   closeTodayModal();
   renderDashboard();
   toast('😴 休筋日を記録しました');
-  // メッセージを休筋日用にリセット
-  const msgs=getDashMsgs();
-  dashMsgIdx=Math.floor(Math.random()*msgs.length);
-  showDashMsg();
+  startAICommentLoop();
 }function clearTodayType(){
   const dt=getDayTypes();
   delete dt[today()];
