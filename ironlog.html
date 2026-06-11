@@ -903,46 +903,39 @@ async function fetchAIComment(){
   const el=document.getElementById('ai-comment-area');
   if(!el)return;
   const tone=getTone();
-  // 今日のデータを収集
+  el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text ai-comment-loading">✨ AIコーチがコメント中...</div></div>`;
+  // 今日のデータ
   const weights=DB.get('weights')||{};
-  const w=weights[today()];
+  const w=weights[today()]||null;
   const protLog=DB.get('protein_'+today())||[];
   const protTotal=Math.round(protLog.reduce((s,e)=>s+e.g,0));
-  const protGoal=getProteinGoal();
   const trainLog=DB.get('train_'+today())||[];
-  const vol=calcTotalVol(trainLog);
+  const vol=Math.round(calcTotalVol(trainLog));
   const sleepHistory=DB.get('sleep_history')||[];
-  const sleepRec=sleepHistory.find(r=>r.date===today());
-  const dt=getDayTypes();
-  const todayTypes=dt[today()]||[];
-  const groups=getMuscleGroups();
-  const typeNames=todayTypes.map(id=>{const g=groups.find(x=>x.id===id);return g?g.name:'';}).filter(Boolean).join('・');
-  // データサマリー
-  const dataSummary=[
-    w?`体重${w}kg`:'体重未記録',
-    protTotal>0?`タンパク質${protTotal}g/${protGoal}g`:'タンパク質未記録',
-    vol>0?`トレーニングボリューム${vol}kg`:'トレーニング未記録',
-    sleepRec?`睡眠${sleepRec.hours}h・疲労度${sleepRec.fatigue}/10`:'睡眠未記録',
-    typeNames?`今日の部位: ${typeNames}`:'',
-  ].filter(Boolean).join('、');
-  // ローディング表示
-  el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text ai-comment-loading">✨ AIコーチがコメント中...</div></div>`;
+  const sleepRec=sleepHistory.find(r=>r.date===today())||null;
+  const parts=[];
+  if(w)parts.push('体重'+w+'kg');
+  if(protTotal>0)parts.push('タンパク質'+protTotal+'g');
+  if(vol>0)parts.push('ボリューム'+vol+'kg');
+  if(sleepRec)parts.push('睡眠'+sleepRec.hours+'h');
+  const dataStr=parts.length?parts.join('、'):'まだ記録なし';
+  const toneStr=tone==='coach'?'厳しめで熱いコーチ':tone==='friend'?'フランクな友達':'データ重視のアナリスト';
+  const prompt=`${toneStr}として、筋トレしている人へ一言コメントしてください。今日のデータ：${dataStr}。日本語2文、絵文字あり。本文のみ。`;
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',max_tokens:120,
-        messages:[{role:'user',content:`筋トレアプリのAIコーチです。${TONE_PROMPTS[tone]}、以下の今日のデータを見て一言コメントしてください。日本語、2〜3文、絵文字あり。データ：${dataSummary}`}]
-      })
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:100,messages:[{role:'user',content:prompt}]})
     });
     const data=await res.json();
-    const text=data.content&&data.content[0]?data.content[0].text.trim():'';
+    const text=data.content&&data.content[0]&&data.content[0].text?data.content[0].text.trim():'';
     if(text){
       el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text">${text}</div><div class="ai-comment-meta"><div class="ai-comment-tone">${TONE_LABELS[tone]}</div></div></div>`;
+    }else{
+      el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text ai-comment-loading">コメントを取得できませんでした</div></div>`;
     }
   }catch(e){
-    el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text" style="color:#ff4444;font-size:12px">❌ APIエラー: ${e.name}: ${e.message}</div></div>`;
+    el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text" style="color:#ff4444;font-size:12px">❌ ${e.name}: ${e.message}</div></div>`;
   }
 }
 
