@@ -1068,8 +1068,7 @@ function init(){
   document.getElementById('onboard').style.display='none';_lastDate=today();  ['weight','protein','train','sleep'].forEach(k=>document.getElementById(k+'-date').textContent=fmtDateJP(today()));
   renderProteinPresets();renderCatTabs();renderExList();
   initToneSelector();renderDashboard();renderWeightHistory();renderProteinToday();renderTrainExercises();renderSleepHistory();renderSleepScore();startAICommentLoop();
-  const tft=document.getElementById('train-fetch-test');
-  if(tft)tft.innerHTML=`<button onclick="testFetch()" style="background:#333;border:none;border-radius:8px;color:#fff;padding:8px 16px;font-size:13px;cursor:pointer;margin-bottom:8px">🔧 ここからfetchテスト</button><div id="train-fetch-result"></div>`;
+
 }
 function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
