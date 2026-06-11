@@ -204,6 +204,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
 .timer-btn.running{background:#555;color:#fff}
 .timer-msg{margin-top:8px;padding:10px 12px;background:#1a1000;border:1px solid #ff9100;border-radius:8px;font-size:13px;line-height:1.6;color:#ffcc80}
 .timer-msg.loading{color:var(--text2);border-color:#333;background:var(--surface2)}
+.session-motiv{padding:14px 16px;border-radius:var(--radius);margin-bottom:12px;font-size:15px;line-height:1.7;font-weight:500;text-align:center;border:1px solid #ff9100;background:linear-gradient(135deg,#1a1000,#2a1a00);color:#ffcc80;min-height:64px;display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
@@ -440,6 +441,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
     <div class="ex-add-btn" onclick="openAddModal()">＋ 新しい種目を追加</div>
     <div style="height:1px;background:#222;margin:8px 0 16px"></div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:8px">TODAY'S SESSION</div>
+    <div id="session-motivation" style="display:none"></div>
     <div id="train-exercises"></div>
     <div id="train-finish-wrap"></div>
     <div class="card" id="train-vol-card" style="display:none">
@@ -674,10 +676,10 @@ function closeTodayModal(){
     // 初回：休筋日 or やってやる
     titleEl.textContent='今日どうする？';
     contentEl.innerHTML=`
-      <button class="today-choice-btn" style="background:#1a1a1a;border:2px solid #555;color:#aaa"
-        onclick="setRestDay()">😴 休筋日</button>
       <button class="today-choice-btn" style="background:linear-gradient(135deg,#1a0800,#2a1200);border:2px solid var(--accent);color:var(--accent)"
-        onclick="renderTodayModalContent('select',null)">💪 やってやる！</button>`;
+        onclick="renderTodayModalContent('select',null)">💪 やってやる！</button>
+      <button class="today-choice-btn" style="background:#1a1a1a;border:2px solid #555;color:#aaa"
+        onclick="setRestDay()">😴 休筋日</button>`;
   }
 }function toggleMuscleSelect(id){
   const groups=getMuscleGroups();
@@ -816,6 +818,53 @@ const TIMER_MSGS=[
   '疲れた時こそ、成長のチャンス 📈','最後まで諦めない奴が強くなる 🦾','今日の頑張りが明日の自分を作る 🏆',
   'セット間の休息も大事。しっかり回復 🧘','筋肥大には十分な休息が必要。焦るな ⏱️','ネガティブ動作もゆっくり意識して 🎯',
 ];
+const SESSION_MOTIV_MSGS=[
+  'さあ始めよう。今日も全力で 🔥','ウォームアップは完璧か？行くぞ 💪','今日のトレーニングで強くなれ ⚡',
+  '集中しろ。ここからが本番だ 👊','限界を超えた先に成長がある 📈','最高の自分を作る時間が始まった 🦾',
+  'フォームを意識して、丁寧に追い込め 🎯','筋肉に語りかけるように動かせ 🧠','今日も昨日の自分を超えていけ 🏆',
+];
+async function startSessionMotivation(){
+  if(motivFetched)return;
+  motivFetched=true;
+  motivMsgs=[SESSION_MOTIV_MSGS[Math.floor(Math.random()*SESSION_MOTIV_MSGS.length)]];
+  motivIdx=0;
+  showMotivMsg();
+  if(motivInterval)clearInterval(motivInterval);
+  motivInterval=setInterval(()=>{
+    motivIdx=(motivIdx+1)%Math.max(1,motivMsgs.length);
+    showMotivMsg();
+  },5000);
+  // AI生成でメッセージを補充
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',max_tokens:300,
+        messages:[{role:'user',content:'筋トレセッション開始時に表示するモチベーションメッセージを5つ作って。日本語、短め（1〜2文）、絵文字あり、熱くなれるもの。JSON配列のみ返すこと。例：["メッセージ1","メッセージ2"]'}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content&&data.content[0]?data.content[0].text:'[]';
+    const clean=text.replace(/```json|```/g,'').trim();
+    const arr=JSON.parse(clean);
+    if(Array.isArray(arr)&&arr.length){motivMsgs=[...SESSION_MOTIV_MSGS,...arr];}
+  }catch(e){}
+}
+function showMotivMsg(){
+  const el=document.getElementById('session-motivation');
+  if(!el)return;
+  const msg=motivMsgs[motivIdx%motivMsgs.length]||'';
+  el.style.display='block';
+  el.innerHTML=`<div class="session-motiv">${msg}</div>`;
+}
+function stopSessionMotivation(){
+  if(motivInterval){clearInterval(motivInterval);motivInterval=null;}
+  motivFetched=false;motivMsgs=[];motivIdx=0;
+  const el=document.getElementById('session-motivation');
+  if(el)el.style.display='none';
+}
+
 function fmtTimer(s){const m=Math.floor(s/60);const ss=s%60;return m>0?`${m}:${String(ss).padStart(2,'0')}`:`${ss}s`;}
 function startTimer(ei){
   if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
@@ -1115,10 +1164,14 @@ let timerExIdx=null;
 let timerInterval=null;
 let timerSecs=0;
 let timerMsgCache='';
+let motivMsgs=[];
+let motivIdx=0;
+let motivInterval=null;
+let motivFetched=false;
 function loadTodayTraining(){sessionExercises=DB.get('train_'+today())||[];}
-function addExToSession(name){loadTodayTraining();if(sessionExercises.find(e=>e.name===name)){toast('⚠ すでに追加済みです','#cc3300');return;}sessionExercises.push({name,sets:[{weight:0,reps:0}],done:false});DB.set('train_'+today(),sessionExercises);renderTrainExercises();toast('✓ '+name+' をセッションに追加！');}
+function addExToSession(name){loadTodayTraining();if(sessionExercises.find(e=>e.name===name)){toast('⚠ すでに追加済みです','#cc3300');return;}sessionExercises.push({name,sets:[{weight:0,reps:0}],done:false});DB.set('train_'+today(),sessionExercises);if(sessionExercises.length===1)startSessionMotivation();renderTrainExercises();toast('✓ '+name+' をセッションに追加！');}
 function addSet(exIdx){loadTodayTraining();sessionExercises[exIdx].sets.push({weight:0,reps:0});DB.set('train_'+today(),sessionExercises);renderTrainExercises();}
-function removeSet(exIdx,setIdx){loadTodayTraining();if(sessionExercises[exIdx].sets.length<=1)sessionExercises.splice(exIdx,1);else sessionExercises[exIdx].sets.splice(setIdx,1);DB.set('train_'+today(),sessionExercises);renderTrainExercises();}
+function removeSet(exIdx,setIdx){loadTodayTraining();if(sessionExercises[exIdx].sets.length<=1)sessionExercises.splice(exIdx,1);else sessionExercises[exIdx].sets.splice(setIdx,1);DB.set('train_'+today(),sessionExercises);if(!sessionExercises.length)stopSessionMotivation();renderTrainExercises();}
 function updateSet(exIdx,setIdx,field,val){loadTodayTraining();sessionExercises[exIdx].sets[setIdx][field]=parseFloat(val)||0;DB.set('train_'+today(),sessionExercises);updateVolDisplay();}
 function toggleDone(exIdx){loadTodayTraining();sessionExercises[exIdx].done=!sessionExercises[exIdx].done;DB.set('train_'+today(),sessionExercises);renderTrainExercises();if(sessionExercises[exIdx].done)toast('✓ '+sessionExercises[exIdx].name+' 完了！');}
 function finishWorkout(){loadTodayTraining();const vol=calcTotalVol(sessionExercises);sessionExercises.forEach(e=>e.done=true);DB.set('train_'+today(),sessionExercises);toast(`🏁 トレーニング完了！ ${fmtNum(vol)}kg`);renderTrainExercises();renderDashboard();}
@@ -1126,7 +1179,7 @@ function calcTotalVol(exList){return exList.reduce((s,ex)=>s+ex.sets.reduce((ss,
 function updateVolDisplay(){loadTodayTraining();const vol=calcTotalVol(sessionExercises);const el=document.getElementById('train-total-vol');if(el)el.textContent=fmtNum(vol)+' kg';const card=document.getElementById('train-vol-card');if(card)card.style.display=sessionExercises.length?'block':'none';}
 function renderTrainExercises(){
   loadTodayTraining();const el=document.getElementById('train-exercises');const finishWrap=document.getElementById('train-finish-wrap');
-  if(!sessionExercises.length){el.innerHTML='<div class="empty-state" style="padding:20px"><div class="icon">💪</div>種目カードをタップして追加</div>';document.getElementById('train-vol-card').style.display='none';finishWrap.innerHTML='';return;}
+  if(!sessionExercises.length){stopSessionMotivation();el.innerHTML='<div class="empty-state" style="padding:20px"><div class="icon">💪</div>種目カードをタップして追加</div>';document.getElementById('train-vol-card').style.display='none';finishWrap.innerHTML='';return;}
   const exercises=getExercises();
   el.innerHTML=sessionExercises.map((ex,ei)=>{
     const vol=ex.sets.reduce((s,set)=>s+(set.weight*set.reps),0);const isDone=ex.done||false;
