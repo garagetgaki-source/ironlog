@@ -934,7 +934,7 @@ async function fetchAIComment(){
       el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text">${text}</div><div class="ai-comment-meta"><div class="ai-comment-tone">${TONE_LABELS[tone]}</div></div></div>`;
     }
   }catch(e){
-    el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text" style="color:#ff4444;font-size:12px">❌ ${e.name}: ${e.message||String(e)}</div></div>`;
+    el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text" style="color:#ff4444;font-size:12px">❌ APIエラー: ${e.name}: ${e.message}</div></div>`;
   }
 }
 
