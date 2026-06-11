@@ -476,7 +476,6 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
     <div style="height:1px;background:#222;margin:8px 0 16px"></div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:8px">TODAY'S SESSION</div>
     <div id="session-motivation" style="display:none"></div>
-    <div id="train-fetch-test"></div>
     <div id="train-exercises"></div>
     <div id="train-finish-wrap"></div>
     <div class="card" id="train-vol-card" style="display:none">
@@ -888,30 +887,10 @@ function initToneSelector(){
 function startAICommentLoop(){
   if(!cfg)return;
   if(aiCommentInterval)clearInterval(aiCommentInterval);
-  const el=document.getElementById('ai-comment-area');
-  if(el)el.innerHTML=`<div class="ai-comment-card"><div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="fetchAIComment()" style="background:var(--accent);border:none;border-radius:8px;color:#fff;padding:10px 20px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer">🤖 AIコーチ</button><button onclick="testFetch()" style="background:#333;border:none;border-radius:8px;color:#fff;padding:10px 20px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer">🔧 タイマーと同じfetch</button></div></div>`;
+  setTimeout(fetchAIComment,1000);
+  aiCommentInterval=setInterval(fetchAIComment,60000);
 }
-async function testFetch(){
-  const el=document.getElementById('ai-comment-area');
-  const el2=document.getElementById('train-fetch-result');
-  const target=el2||el;
-  if(el)el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text ai-comment-loading">テスト中...</div></div>`;
-  if(el2)el2.innerHTML='<span style="color:#999;font-size:13px">テスト中...</span>';
-  try{
-    const res=await fetch('https://ironlog-proxy.garage-tgaki.workers.dev',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:50,messages:[{role:'user',content:'テスト。「OK」とだけ返して。'}]})
-    });
-    const data=await res.json();
-    const text=data.content&&data.content[0]?data.content[0].text:'no text';
-    if(el)el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text">✅ 成功: ${text}</div></div>`;
-    if(el2)el2.innerHTML=`<span style="color:var(--green);font-size:13px">✅ 成功: ${text}</span>`;
-  }catch(e){
-    if(el)el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text" style="color:#ff4444">❌ ${e.name}: ${e.message}</div></div>`;
-    if(el2)el2.innerHTML=`<span style="color:#ff4444;font-size:13px">❌ ${e.name}: ${e.message}</span>`;
-  }
-}
+
 async function fetchAIComment(){
   if(!cfg)return;
   const el=document.getElementById('ai-comment-area');
