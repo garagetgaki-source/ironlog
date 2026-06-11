@@ -898,7 +898,7 @@ async function testFetch(){
   if(el)el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text ai-comment-loading">テスト中...</div></div>`;
   if(el2)el2.innerHTML='<span style="color:#999;font-size:13px">テスト中...</span>';
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('https://ironlog-proxy.garage-tgaki.workers.dev',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:50,messages:[{role:'user',content:'テスト。「OK」とだけ返して。'}]})
@@ -942,7 +942,7 @@ async function fetchAIComment(){
   // ローディング表示
   el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text ai-comment-loading">✨ AIコーチがコメント中...</div></div>`;
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('https://ironlog-proxy.garage-tgaki.workers.dev',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -985,7 +985,7 @@ async function startSessionMotivation(){
 }
 async function fetchAndShowMotiv(){
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('https://ironlog-proxy.garage-tgaki.workers.dev',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -1034,7 +1034,7 @@ async function fetchTimerMsg(ei,fallback){
   const msgEl=document.getElementById('timer-msg-'+ei);
   if(msgEl)msgEl.innerHTML='<span style="opacity:0.6">✨ AIメッセージ生成中...</span>';
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('https://ironlog-proxy.garage-tgaki.workers.dev',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
