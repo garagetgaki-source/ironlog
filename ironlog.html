@@ -476,6 +476,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
     <div style="height:1px;background:#222;margin:8px 0 16px"></div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:8px">TODAY'S SESSION</div>
     <div id="session-motivation" style="display:none"></div>
+    <div id="train-fetch-test"></div>
     <div id="train-exercises"></div>
     <div id="train-finish-wrap"></div>
     <div class="card" id="train-vol-card" style="display:none">
@@ -892,7 +893,10 @@ function startAICommentLoop(){
 }
 async function testFetch(){
   const el=document.getElementById('ai-comment-area');
-  el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text ai-comment-loading">テスト中...</div></div>`;
+  const el2=document.getElementById('train-fetch-result');
+  const target=el2||el;
+  if(el)el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text ai-comment-loading">テスト中...</div></div>`;
+  if(el2)el2.innerHTML='<span style="color:#999;font-size:13px">テスト中...</span>';
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -901,9 +905,11 @@ async function testFetch(){
     });
     const data=await res.json();
     const text=data.content&&data.content[0]?data.content[0].text:'no text';
-    el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text">✅ 成功: ${text}</div></div>`;
+    if(el)el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text">✅ 成功: ${text}</div></div>`;
+    if(el2)el2.innerHTML=`<span style="color:var(--green);font-size:13px">✅ 成功: ${text}</span>`;
   }catch(e){
-    el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text" style="color:#ff4444">❌ ${e.name}: ${e.message}</div></div>`;
+    if(el)el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text" style="color:#ff4444">❌ ${e.name}: ${e.message}</div></div>`;
+    if(el2)el2.innerHTML=`<span style="color:#ff4444;font-size:13px">❌ ${e.name}: ${e.message}</span>`;
   }
 }
 async function fetchAIComment(){
@@ -1062,6 +1068,8 @@ function init(){
   document.getElementById('onboard').style.display='none';_lastDate=today();  ['weight','protein','train','sleep'].forEach(k=>document.getElementById(k+'-date').textContent=fmtDateJP(today()));
   renderProteinPresets();renderCatTabs();renderExList();
   initToneSelector();renderDashboard();renderWeightHistory();renderProteinToday();renderTrainExercises();renderSleepHistory();renderSleepScore();startAICommentLoop();
+  const tft=document.getElementById('train-fetch-test');
+  if(tft)tft.innerHTML=`<button onclick="testFetch()" style="background:#333;border:none;border-radius:8px;color:#fff;padding:8px 16px;font-size:13px;cursor:pointer;margin-bottom:8px">🔧 ここからfetchテスト</button><div id="train-fetch-result"></div>`;
 }
 function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
