@@ -728,6 +728,10 @@ function closeTodayModal(){
   closeTodayModal();
   renderDashboard();
   toast('😴 休筋日を記録しました');
+  // メッセージを休筋日用にリセット
+  const msgs=getDashMsgs();
+  dashMsgIdx=Math.floor(Math.random()*msgs.length);
+  showDashMsg();
 }function clearTodayType(){
   const dt=getDayTypes();
   delete dt[today()];
@@ -896,7 +900,22 @@ const DASH_MSGS={
     '深夜まで頑張ったんだから、今夜は最高の眠りにしよう 🌙 明日もまた最高の一日だ！',
   ],
 };
+const DASH_MSGS_REST=[
+  '今日は休筋日！しっかり休むのも立派なトレーニングだ 🌙',
+  '超回復中！筋肉が育ってるのを感じろ 💪 今日は体を労わろう！',
+  '休息日こそ食事と睡眠を完璧にしよう 😴 それが明日の自分への最高のギフト！',
+  '休む勇気も必要だ 🌿 しっかり回復して、次のトレーニングで爆発しよう！',
+  'オーバートレーニングは敵だ ⚠️ 今日の休息が明日の最高パフォーマンスを作る！',
+  '筋肉はジムで壊して、食事と睡眠で育てる 🥩 今日はその育てる日！',
+  '休筋日のタンパク質も忘れずに 💊 回復をサポートしてあげよう！',
+  'アクティブレストもあり 🚶 軽い散歩やストレッチで体をほぐそう！',
+  '今日休んだ分、次のトレーニングが最高になる 🔥 それを楽しみにしよう！',
+  'よく頑張ってきた。今日はしっかり体を休めてやれ 🌟',
+];
 function getDashMsgs(){
+  const dt=getDayTypes();
+  const todayTypes=dt[today()]||[];
+  if(todayTypes.includes('rest'))return DASH_MSGS_REST;
   const h=new Date().getHours();
   if(h>=5&&h<11)return DASH_MSGS.morning;
   if(h>=11&&h<17)return DASH_MSGS.afternoon;
