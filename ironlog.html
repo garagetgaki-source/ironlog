@@ -885,11 +885,13 @@ function initToneSelector(){
   });
 }
 function startAICommentLoop(){
+  if(!cfg)return;
   fetchAIComment();
   if(aiCommentInterval)clearInterval(aiCommentInterval);
   aiCommentInterval=setInterval(fetchAIComment,15000);
 }
 async function fetchAIComment(){
+  if(!cfg)return;
   const el=document.getElementById('ai-comment-area');
   if(!el)return;
   const tone=getTone();
@@ -932,7 +934,7 @@ async function fetchAIComment(){
       el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text">${text}</div><div class="ai-comment-meta"><div class="ai-comment-tone">${TONE_LABELS[tone]}</div></div></div>`;
     }
   }catch(e){
-    el.innerHTML='';
+    el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text ai-comment-loading">📡 オフラインのためコメントを取得できません</div></div>`;
   }
 }
 
