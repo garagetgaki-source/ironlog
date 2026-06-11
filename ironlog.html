@@ -847,7 +847,7 @@ async function startSessionMotivation(){
   showMotivMsg(SESSION_MOTIV_MSGS[Math.floor(Math.random()*SESSION_MOTIV_MSGS.length)]);
   // 5秒ごとにAIで新しいメッセージを生成
   if(motivInterval)clearInterval(motivInterval);
-  motivInterval=setInterval(()=>fetchAndShowMotiv(),5000);
+  motivInterval=setInterval(()=>fetchAndShowMotiv(),10000);
 }
 async function fetchAndShowMotiv(){
   try{
