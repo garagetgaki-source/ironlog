@@ -887,8 +887,16 @@ function initToneSelector(){
 function startAICommentLoop(){
   if(!cfg)return;
   if(aiCommentInterval)clearInterval(aiCommentInterval);
-  setTimeout(fetchAIComment, 1000);
-  aiCommentInterval=setInterval(fetchAIComment,15000);
+  // SWが完全起動してから実行
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.ready.then(()=>{
+      setTimeout(fetchAIComment, 500);
+      aiCommentInterval=setInterval(fetchAIComment,15000);
+    });
+  } else {
+    setTimeout(fetchAIComment, 500);
+    aiCommentInterval=setInterval(fetchAIComment,15000);
+  }
 }
 async function fetchAIComment(){
   if(!cfg)return;
