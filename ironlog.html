@@ -291,22 +291,6 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
         <div class="btn btn-secondary" style="text-align:center;cursor:pointer;margin-top:0">📥 データをインポート</div>
         <input type="file" accept=".json" onchange="importData(event)" style="display:none">
       </label>
-      <!-- AIコメント設定 -->
-      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin:20px 0 8px">AIコーチのトーン</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px">
-        <div class="sleep-opt" id="tone-coach" onclick="selectTone('coach')" style="padding:10px 6px">
-          <div class="emoji" style="font-size:20px">🔥</div>
-          <div style="font-size:12px;margin-top:2px">コーチ</div>
-        </div>
-        <div class="sleep-opt" id="tone-friend" onclick="selectTone('friend')" style="padding:10px 6px">
-          <div class="emoji" style="font-size:20px">😄</div>
-          <div style="font-size:12px;margin-top:2px">友達</div>
-        </div>
-        <div class="sleep-opt" id="tone-data" onclick="selectTone('data')" style="padding:10px 6px">
-          <div class="emoji" style="font-size:20px">📊</div>
-          <div style="font-size:12px;margin-top:2px">データ</div>
-        </div>
-      </div>
       <!-- バージョン情報 -->
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid #222;text-align:center">
         <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">アプリバージョン</div>
@@ -476,6 +460,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
     <div style="height:1px;background:#222;margin:8px 0 16px"></div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:8px">TODAY'S SESSION</div>
     <div id="session-motivation" style="display:none"></div>
+    <div id="train-fetch-test"></div>
     <div id="train-exercises"></div>
     <div id="train-finish-wrap"></div>
     <div class="card" id="train-vol-card" style="display:none">
@@ -559,7 +544,6 @@ setInterval(()=>{if(today()!==_lastDate)location.reload();},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&today()!==_lastDate)location.reload();});const fmtNum=n=>Math.round(n*10)/10;
 const fmtDateJP=d=>{const dt=new Date(d+'T00:00:00');return `${dt.getMonth()+1}月${dt.getDate()}日`};let cfg=DB.get('cfg')||null;
 let aiCommentInterval=null;
-let aiCommentCache={date:null,text:null};
 let currentCat='全て';
 let longPressTimer=null;
 let editingExName=null;
@@ -790,7 +774,7 @@ function addMuscleGroup(){
 // =====================
 function openSettingsModal(){
   if(!cfg)return;
-  initToneSelector();
+  
   const weights=DB.get('weights')||{};
   const keys=Object.keys(weights).sort();
   const latestW=keys.length?weights[keys[keys.length-1]]:null;
@@ -859,86 +843,44 @@ function importData(event){
 // ONBOARD / INIT
 // =====================
 // =====================
-// AIコーチコメント
+// ダッシュボードメッセージ
 // =====================
-const TONE_PROMPTS={
-  coach:'厳しめで熱いコーチとして',
-  friend:'フランクで明るい友達として',
-  data:'データを重視する冷静なアナリストとして',
-};
-const TONE_LABELS={coach:'🔥 コーチ',friend:'😄 友達',data:'📊 データ'};
-function getTone(){return DB.get('ai_tone')||'coach';}
-function selectTone(tone){
-  DB.set('ai_tone',tone);
-  ['coach','friend','data'].forEach(t=>{
-    const el=document.getElementById('tone-'+t);
-    if(el)el.classList.toggle('selected',t===tone);
-  });
-  aiCommentCache={date:null,text:null};
-  fetchAIComment();
-}
-function initToneSelector(){
-  const tone=getTone();
-  ['coach','friend','data'].forEach(t=>{
-    const el=document.getElementById('tone-'+t);
-    if(el)el.classList.toggle('selected',t===tone);
-  });
-}
+const DASH_MSGS=[
+  '今日も体と向き合え。それだけでいい 💪',
+  '筋肉は裏切らない。記録し続けろ 📈',
+  '昨日より少しだけ強くなる。それが全て ⚡',
+  'タンパク質は摂ったか？筋肉の材料だぞ 🥩',
+  '睡眠は最強のサプリだ。しっかり寝ろ 😴',
+  '今日のサボりは明日の後悔になる 🔥',
+  '体重より筋肉量を増やすことを考えろ 💡',
+  'インターバルも練習のうち。集中しろ 🎯',
+  '継続こそが最強のトレーニングだ 🏆',
+  '限界を超えた先に成長がある 🦾',
+  '今日のボリュームが明日の筋肉になる 📊',
+  'フォームを崩すな。怪我は最大の敵だ ⚠️',
+  'プロテインのゴールデンタイムを逃すな ⏰',
+  '水分補給を忘れるな。筋肉の70%は水だ 💧',
+  '休息日も立派なトレーニングの一部だ 🌙',
+];
+let dashMsgIdx=0;
 function startAICommentLoop(){
   if(!cfg)return;
   if(aiCommentInterval)clearInterval(aiCommentInterval);
-  setTimeout(fetchAIComment,1000);
-  aiCommentInterval=setInterval(fetchAIComment,60000);
+  dashMsgIdx=Math.floor(Math.random()*DASH_MSGS.length);
+  showDashMsg();
+  aiCommentInterval=setInterval(()=>{
+    dashMsgIdx=(dashMsgIdx+1)%DASH_MSGS.length;
+    showDashMsg();
+  },8000);
 }
-
-async function fetchAIComment(){
-  if(!cfg)return;
+function showDashMsg(){
   const el=document.getElementById('ai-comment-area');
   if(!el)return;
-  const tone=getTone();
-  // 今日のデータを収集
-  const weights=DB.get('weights')||{};
-  const w=weights[today()];
-  const protLog=DB.get('protein_'+today())||[];
-  const protTotal=Math.round(protLog.reduce((s,e)=>s+e.g,0));
-  const protGoal=getProteinGoal();
-  const trainLog=DB.get('train_'+today())||[];
-  const vol=calcTotalVol(trainLog);
-  const sleepHistory=DB.get('sleep_history')||[];
-  const sleepRec=sleepHistory.find(r=>r.date===today());
-  const dt=getDayTypes();
-  const todayTypes=dt[today()]||[];
-  const groups=getMuscleGroups();
-  const typeNames=todayTypes.map(id=>{const g=groups.find(x=>x.id===id);return g?g.name:'';}).filter(Boolean).join('・');
-  // データサマリー
-  const dataSummary=[
-    w?`体重${w}kg`:'体重未記録',
-    protTotal>0?`タンパク質${protTotal}g/${protGoal}g`:'タンパク質未記録',
-    vol>0?`トレーニングボリューム${vol}kg`:'トレーニング未記録',
-    sleepRec?`睡眠${sleepRec.hours}h・疲労度${sleepRec.fatigue}/10`:'睡眠未記録',
-    typeNames?`今日の部位: ${typeNames}`:'',
-  ].filter(Boolean).join('、');
-  // ローディング表示
-  el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text ai-comment-loading">✨ AIコーチがコメント中...</div></div>`;
-  try{
-    const res=await fetch('https://ironlog-proxy.garage-tgaki.workers.dev',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',max_tokens:120,
-        messages:[{role:'user',content:`筋トレアプリのAIコーチです。${TONE_PROMPTS[tone]}、以下の今日のデータを見て一言コメントしてください。日本語、2〜3文、絵文字あり。データ：${dataSummary}`}]
-      })
-    });
-    const data=await res.json();
-    const text=data.content&&data.content[0]?data.content[0].text.trim():'';
-    if(text){
-      el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text">${text}</div><div class="ai-comment-meta"><div class="ai-comment-tone">${TONE_LABELS[tone]}</div></div></div>`;
-    }
-  }catch(e){
-    el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text" style="color:#ff4444;font-size:12px">❌ APIエラー: ${e.name}: ${e.message}</div></div>`;
-  }
+  el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text">${DASH_MSGS[dashMsgIdx]}</div></div>`;
 }
 
+// =====================
+// インターバルタイマー
 // =====================
 // インターバルタイマー
 // =====================
@@ -1046,7 +988,7 @@ function init(){
   if(!cfg){document.getElementById('onboard').style.display='flex';return;}
   document.getElementById('onboard').style.display='none';_lastDate=today();  ['weight','protein','train','sleep'].forEach(k=>document.getElementById(k+'-date').textContent=fmtDateJP(today()));
   renderProteinPresets();renderCatTabs();renderExList();
-  initToneSelector();renderDashboard();renderWeightHistory();renderProteinToday();renderTrainExercises();renderSleepHistory();renderSleepScore();startAICommentLoop();
+  renderDashboard();renderWeightHistory();renderProteinToday();renderTrainExercises();renderSleepHistory();renderSleepScore();startAICommentLoop();
 
 }
 function showScreen(name){
