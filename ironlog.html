@@ -198,6 +198,14 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
 .accordion-arrow.open{transform:rotate(180deg)}
 .accordion-body{display:none;background:var(--surface);padding:8px}
 .accordion-body.open{display:block}
+.preset-edit-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.preset-edit-row .inp{height:38px;font-size:14px;padding:6px 10px}
+.ai-comment-card{background:linear-gradient(135deg,#0d0d1a,#0a1a0d);border:1px solid #333;border-radius:var(--radius);padding:16px;margin-bottom:14px;position:relative;overflow:hidden}
+.ai-comment-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--gold),var(--green))}
+.ai-comment-text{font-size:14px;line-height:1.8;color:var(--text);min-height:48px}
+.ai-comment-meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.ai-comment-tone{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+.ai-comment-loading{color:var(--text2);font-size:13px;opacity:0.6}
 .timer-wrap{display:flex;align-items:center;gap:10px;margin-top:8px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid #333}
 .timer-display{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;min-width:72px;line-height:1}
 .timer-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;flex-shrink:0}
@@ -283,6 +291,22 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
         <div class="btn btn-secondary" style="text-align:center;cursor:pointer;margin-top:0">📥 データをインポート</div>
         <input type="file" accept=".json" onchange="importData(event)" style="display:none">
       </label>
+      <!-- AIコメント設定 -->
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin:20px 0 8px">AIコーチのトーン</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px">
+        <div class="sleep-opt" id="tone-coach" onclick="selectTone('coach')" style="padding:10px 6px">
+          <div class="emoji" style="font-size:20px">🔥</div>
+          <div style="font-size:12px;margin-top:2px">コーチ</div>
+        </div>
+        <div class="sleep-opt" id="tone-friend" onclick="selectTone('friend')" style="padding:10px 6px">
+          <div class="emoji" style="font-size:20px">😄</div>
+          <div style="font-size:12px;margin-top:2px">友達</div>
+        </div>
+        <div class="sleep-opt" id="tone-data" onclick="selectTone('data')" style="padding:10px 6px">
+          <div class="emoji" style="font-size:20px">📊</div>
+          <div style="font-size:12px;margin-top:2px">データ</div>
+        </div>
+      </div>
       <!-- バージョン情報 -->
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid #222;text-align:center">
         <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">アプリバージョン</div>
@@ -328,6 +352,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
         <div class="settings-btn" onclick="openSettingsModal()">⚙️</div>
       </div>
     </div>
+    <div id="ai-comment-area"></div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:8px">TODAY</div>
     <div class="dash-grid">
       <div class="stat-card accent" id="d-card-weight" onclick="showScreen('weight')">
@@ -422,7 +447,11 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
       </div>
       <button class="btn btn-primary" onclick="saveProtein()">ADD PROTEIN 💊</button>
       <div class="divider"></div>
-      <div class="card-label">クイック追加</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="card-label" style="margin-bottom:0">クイック追加</div>
+        <div class="edit-btn-sm" id="preset-edit-btn" onclick="togglePresetEdit()">✏️ 編集</div>
+      </div>
+      <div id="preset-edit-area" style="display:none;margin-bottom:10px"></div>
       <div class="preset-grid" id="prot-presets"></div>
     </div>
     <div class="section-title">本日の摂取ログ</div>
@@ -529,6 +558,8 @@ let _lastDate=today();
 setInterval(()=>{if(today()!==_lastDate)location.reload();},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&today()!==_lastDate)location.reload();});const fmtNum=n=>Math.round(n*10)/10;
 const fmtDateJP=d=>{const dt=new Date(d+'T00:00:00');return `${dt.getMonth()+1}月${dt.getDate()}日`};let cfg=DB.get('cfg')||null;
+let aiCommentInterval=null;
+let aiCommentCache={date:null,text:null};
 let currentCat='全て';
 let longPressTimer=null;
 let editingExName=null;
@@ -759,6 +790,7 @@ function addMuscleGroup(){
 // =====================
 function openSettingsModal(){
   if(!cfg)return;
+  initToneSelector();
   const weights=DB.get('weights')||{};
   const keys=Object.keys(weights).sort();
   const latestW=keys.length?weights[keys[keys.length-1]]:null;
@@ -826,6 +858,84 @@ function importData(event){
 }// =====================
 // ONBOARD / INIT
 // =====================
+// =====================
+// AIコーチコメント
+// =====================
+const TONE_PROMPTS={
+  coach:'厳しめで熱いコーチとして',
+  friend:'フランクで明るい友達として',
+  data:'データを重視する冷静なアナリストとして',
+};
+const TONE_LABELS={coach:'🔥 コーチ',friend:'😄 友達',data:'📊 データ'};
+function getTone(){return DB.get('ai_tone')||'coach';}
+function selectTone(tone){
+  DB.set('ai_tone',tone);
+  ['coach','friend','data'].forEach(t=>{
+    const el=document.getElementById('tone-'+t);
+    if(el)el.classList.toggle('selected',t===tone);
+  });
+  aiCommentCache={date:null,text:null};
+  fetchAIComment();
+}
+function initToneSelector(){
+  const tone=getTone();
+  ['coach','friend','data'].forEach(t=>{
+    const el=document.getElementById('tone-'+t);
+    if(el)el.classList.toggle('selected',t===tone);
+  });
+}
+function startAICommentLoop(){
+  fetchAIComment();
+  if(aiCommentInterval)clearInterval(aiCommentInterval);
+  aiCommentInterval=setInterval(fetchAIComment,15000);
+}
+async function fetchAIComment(){
+  const el=document.getElementById('ai-comment-area');
+  if(!el)return;
+  const tone=getTone();
+  // 今日のデータを収集
+  const weights=DB.get('weights')||{};
+  const w=weights[today()];
+  const protLog=DB.get('protein_'+today())||[];
+  const protTotal=Math.round(protLog.reduce((s,e)=>s+e.g,0));
+  const protGoal=getProteinGoal();
+  const trainLog=DB.get('train_'+today())||[];
+  const vol=calcTotalVol(trainLog);
+  const sleepHistory=DB.get('sleep_history')||[];
+  const sleepRec=sleepHistory.find(r=>r.date===today());
+  const dt=getDayTypes();
+  const todayTypes=dt[today()]||[];
+  const groups=getMuscleGroups();
+  const typeNames=todayTypes.map(id=>{const g=groups.find(x=>x.id===id);return g?g.name:'';}).filter(Boolean).join('・');
+  // データサマリー
+  const dataSummary=[
+    w?`体重${w}kg`:'体重未記録',
+    protTotal>0?`タンパク質${protTotal}g/${protGoal}g`:'タンパク質未記録',
+    vol>0?`トレーニングボリューム${vol}kg`:'トレーニング未記録',
+    sleepRec?`睡眠${sleepRec.hours}h・疲労度${sleepRec.fatigue}/10`:'睡眠未記録',
+    typeNames?`今日の部位: ${typeNames}`:'',
+  ].filter(Boolean).join('、');
+  // ローディング表示
+  el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text ai-comment-loading">✨ AIコーチがコメント中...</div></div>`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',max_tokens:120,
+        messages:[{role:'user',content:`筋トレアプリのAIコーチです。${TONE_PROMPTS[tone]}、以下の今日のデータを見て一言コメントしてください。日本語、2〜3文、絵文字あり。データ：${dataSummary}`}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content&&data.content[0]?data.content[0].text.trim():'';
+    if(text){
+      el.innerHTML=`<div class="ai-comment-card"><div class="ai-comment-text">${text}</div><div class="ai-comment-meta"><div class="ai-comment-tone">${TONE_LABELS[tone]}</div></div></div>`;
+    }
+  }catch(e){
+    el.innerHTML='';
+  }
+}
+
 // =====================
 // インターバルタイマー
 // =====================
@@ -933,14 +1043,15 @@ function init(){
   if(!cfg){document.getElementById('onboard').style.display='flex';return;}
   document.getElementById('onboard').style.display='none';_lastDate=today();  ['weight','protein','train','sleep'].forEach(k=>document.getElementById(k+'-date').textContent=fmtDateJP(today()));
   renderProteinPresets();renderCatTabs();renderExList();
-  renderDashboard();renderWeightHistory();renderProteinToday();renderTrainExercises();renderSleepHistory();renderSleepScore();
+  initToneSelector();renderDashboard();renderWeightHistory();renderProteinToday();renderTrainExercises();renderSleepHistory();renderSleepScore();startAICommentLoop();
 }
 function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
-  document.getElementById('nav-'+name).classList.add('active');
-  if(name==='dash')renderDashboard();['weight','protein','train','sleep'].forEach(k=>document.getElementById(k+'-date').textContent=fmtDateJP(today()));
+  if(document.getElementById('nav-'+name))document.getElementById('nav-'+name).classList.add('active');
+  if(name==='dash'){renderDashboard();startAICommentLoop();}
+  else{if(aiCommentInterval){clearInterval(aiCommentInterval);aiCommentInterval=null;}}['weight','protein','train','sleep'].forEach(k=>document.getElementById(k+'-date').textContent=fmtDateJP(today()));
   if(name==='weight')renderWeightHistory();
   if(name==='protein')renderProteinToday();
   if(name==='train'){renderCatTabs();renderExList();renderTrainExercises();}
@@ -1166,11 +1277,46 @@ const DEFAULT_EXERCISES=[
   {name:'トライセプス',cat:'腕',tips:'肘を固定して伸展。上腕三頭筋を強く収縮させる。',yt:''},
   {name:'ディップス',cat:'腕',tips:'前傾すると胸、直立すると三頭筋に効く。肘が外に開かないよう注意。',yt:''},
 ];
-const PROT_PRESETS=[
+const DEFAULT_PROT_PRESETS=[
   {name:'プロテイン1杯',g:24},{name:'ゆで卵1個',g:6},
   {name:'朝ご飯',g:null},{name:'間食',g:null},
   {name:'お昼ご飯',g:null},{name:'夕ご飯',g:null},{name:'夜食',g:null},
-];// =====================
+];
+function getPresets(){return DB.get('prot_presets')||DEFAULT_PROT_PRESETS;}
+function savePresets(arr){DB.set('prot_presets',arr);}
+let presetEditMode=false;
+function togglePresetEdit(){
+  presetEditMode=!presetEditMode;
+  document.getElementById('preset-edit-btn').textContent=presetEditMode?'✕ 閉じる':'✏️ 編集';
+  document.getElementById('preset-edit-btn').classList.toggle('active',presetEditMode);
+  renderPresetEditArea();
+}
+function renderPresetEditArea(){
+  const el=document.getElementById('preset-edit-area');
+  if(!presetEditMode){el.style.display='none';return;}
+  const presets=getPresets();
+  el.style.display='block';
+  el.innerHTML=presets.map((p,i)=>`
+    <div class="preset-edit-row">
+      <input class="inp" value="${p.name}" placeholder="名前" style="flex:2" oninput="updatePreset(${i},'name',this.value)">
+      <input class="inp" type="number" step="1" value="${p.g??''}" placeholder="g" style="flex:1;min-width:0" oninput="updatePreset(${i},'g',this.value)">
+      <div class="btn-icon" onclick="deletePreset(${i})">×</div>
+    </div>`).join('')+`<button class="btn btn-secondary" onclick="addPreset()" style="padding:8px;font-size:14px;margin-top:4px">＋ 追加</button>`;
+}
+function updatePreset(idx,field,val){
+  const presets=getPresets();
+  if(field==='g')presets[idx].g=val===''?null:parseFloat(val)||null;
+  else presets[idx].name=val;
+  savePresets(presets);renderProteinPresets();
+}
+function deletePreset(idx){
+  const presets=getPresets();presets.splice(idx,1);
+  savePresets(presets);renderPresetEditArea();renderProteinPresets();
+}
+function addPreset(){
+  const presets=getPresets();presets.push({name:'新しい項目',g:null});
+  savePresets(presets);renderPresetEditArea();renderProteinPresets();
+}// =====================
 // SESSION
 // =====================
 let sessionExercises=[];
@@ -1225,7 +1371,7 @@ function saveSleep(){const hours=parseFloat(document.getElementById('sleep-hours
 function renderSleepHistory(){const history=(DB.get('sleep_history')||[]).slice(-7).reverse();const el=document.getElementById('sleep-history');if(!history.length){el.innerHTML='<div class="empty-state"><div class="icon">🌙</div>記録がありません</div>';return;}const qualLabel={4:'爆睡😴',3:'まあまあ🙂',2:'浅め😐',1:'最悪😩'};el.innerHTML=history.map(r=>{const score=Math.round(calcSleepScore(r.hours,r.quality,r.fatigue)*10)/10;const scoreColor=score>=8?'var(--green)':score>=6?'var(--yellow)':'var(--accent)';return `<div class="log-item"><div><div class="name">${fmtDateJP(r.date)}</div><div class="detail">${qualLabel[r.quality]||''} ${r.note?'/ '+r.note.slice(0,15):''}</div></div><div style="display:flex;gap:12px;align-items:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px">${r.hours.toFixed(1)}h</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:${scoreColor}">${score}<span style="font-size:12px;color:var(--text2)">/10</span></div></div></div>`;}).join('');}// =====================
 // PROTEIN
 // =====================
-function renderProteinPresets(){document.getElementById('prot-presets').innerHTML=PROT_PRESETS.map(p=>{const gHtml=p.g!=null?`<span class="chip-g">${p.g}g</span>`:`<span class="chip-g empty">g入力</span>`;return `<div class="preset-chip" onclick="selectProtPreset('${p.name}',${p.g??'null'})">${p.name}${gHtml}</div>`;}).join('');}
+function renderProteinPresets(){document.getElementById('prot-presets').innerHTML=getPresets().map(p=>{const gHtml=p.g!=null?`<span class="chip-g">${p.g}g</span>`:`<span class="chip-g empty">g入力</span>`;return `<div class="preset-chip" onclick="selectProtPreset('${p.name}',${p.g??'null'})">${p.name}${gHtml}</div>`;}).join('');}
 function selectProtPreset(name,g){document.getElementById('prot-food').value=name;document.getElementById('prot-amount').value=(g!==null&&g!=='null')?g:'';document.getElementById('prot-amount').focus();}
 function getProteinGoal(){const weights=DB.get('weights')||{};const keys=Object.keys(weights).sort();const latestW=keys.length?weights[keys[keys.length-1]]:70;return Math.round(latestW*(cfg?.proteinFactor||1.6));}
 function saveProtein(){const food=document.getElementById('prot-food').value.trim()||'食事';const g=parseFloat(document.getElementById('prot-amount').value);if(isNaN(g)||g<=0){toast('⚠ タンパク質量を入力してください','#cc3300');return;}const log=DB.get('protein_'+today())||[];log.push({food,g,time:new Date().toTimeString().slice(0,5)});DB.set('protein_'+today(),log);toast(`✓ ${food}: +${g}g 追加！`);document.getElementById('prot-food').value='';document.getElementById('prot-amount').value='';renderProteinToday();renderDashboard();}
