@@ -536,8 +536,20 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
     </div>
     <div class="summary-nav">
       <div class="summary-nav-btn" onclick="prevWeek()">‹</div>
-      <div class="summary-week-label" id="summary-week-label"></div>
+      <div class="summary-week-label" id="summary-week-label" onclick="toggleCustomRange()" style="cursor:pointer"></div>
       <div class="summary-nav-btn" id="summary-next-btn" onclick="nextWeek()">›</div>
+    </div>
+    <div id="summary-custom-range" style="display:none;margin-bottom:12px">
+      <div class="card" style="padding:12px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">期間を指定</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="date" id="summary-start-date" class="inp" style="flex:1;min-width:0;height:40px;font-size:14px;padding:6px 10px">
+          <span style="color:var(--text2)">〜</span>
+          <input type="date" id="summary-end-date" class="inp" style="flex:1;min-width:0;height:40px;font-size:14px;padding:6px 10px">
+        </div>
+        <button class="btn btn-primary" onclick="applyCustomRange()" style="margin-top:8px;padding:10px;font-size:15px">適用</button>
+        <button class="btn btn-secondary" onclick="resetToWeekMode()" style="margin-top:6px;padding:8px;font-size:13px">週モードに戻す</button>
+      </div>
     </div>
     <div id="summary-content"></div>
   </div>
@@ -1051,6 +1063,9 @@ function showDashMsg(){
 // 週間サマリー
 // =====================
 let summaryWeekOffset=0;
+let summaryCustomMode=false;
+let summaryCustomStart=null;
+let summaryCustomEnd=null;
 function getWeekRange(offset){
   const now=new Date();const dow=now.getDay();
   const monday=new Date(now);monday.setDate(now.getDate()-((dow+6)%7)+offset*7);monday.setHours(0,0,0,0);
@@ -1060,15 +1075,57 @@ function getWeekRange(offset){
 function fmtDateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function prevWeek(){summaryWeekOffset--;renderSummary();}
 function nextWeek(){if(summaryWeekOffset<0){summaryWeekOffset++;renderSummary();}}
-function renderSummary(){
-  const {start,end}=getWeekRange(summaryWeekOffset);
-  const startStr=(start.getMonth()+1)+'/'+start.getDate();
-  const endStr=(end.getMonth()+1)+'/'+end.getDate();
-  document.getElementById('summary-week-label').textContent=startStr+' 〜 '+endStr;
+function toggleCustomRange(){
+  const el=document.getElementById('summary-custom-range');
+  if(el)el.style.display=el.style.display==='none'?'block':'none';
+}
+function applyCustomRange(){
+  const s=document.getElementById('summary-start-date').value;
+  const e=document.getElementById('summary-end-date').value;
+  if(!s||!e){toast('⚠ 開始日と終了日を入力してください','#cc3300');return;}
+  if(s>e){toast('⚠ 開始日は終了日より前にしてください','#cc3300');return;}
+  summaryCustomMode=true;
+  summaryCustomStart=s;
+  summaryCustomEnd=e;
+  document.getElementById('summary-custom-range').style.display='none';
+  const prevBtn=document.querySelector('.summary-nav-btn:first-child');
   const nextBtn=document.getElementById('summary-next-btn');
-  if(nextBtn)nextBtn.style.opacity=summaryWeekOffset<0?'1':'0.3';
-  const days=[];
-  for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(fmtDateKey(d));}
+  if(prevBtn)prevBtn.style.opacity='0.3';
+  if(nextBtn)nextBtn.style.opacity='0.3';
+  renderSummary();
+}
+function resetToWeekMode(){
+  summaryCustomMode=false;summaryCustomStart=null;summaryCustomEnd=null;
+  summaryWeekOffset=0;
+  document.getElementById('summary-custom-range').style.display='none';
+  renderSummary();
+}
+function renderSummary(){
+  let start,end,days=[];
+  if(summaryCustomMode&&summaryCustomStart&&summaryCustomEnd){
+    start=new Date(summaryCustomStart+'T00:00:00');
+    end=new Date(summaryCustomEnd+'T00:00:00');
+    const d=new Date(start);
+    while(d<=end){days.push(fmtDateKey(d));d.setDate(d.getDate()+1);}
+    const startStr=(start.getMonth()+1)+'/'+start.getDate();
+    const endStr=(end.getMonth()+1)+'/'+end.getDate();
+    document.getElementById('summary-week-label').textContent=startStr+' 〜 '+endStr+' ✎';
+    const prevBtn=document.querySelector('.summary-nav-btn:first-child');
+    const nextBtn=document.getElementById('summary-next-btn');
+    if(prevBtn)prevBtn.style.opacity='0.3';
+    if(nextBtn)nextBtn.style.opacity='0.3';
+  } else {
+    const range=getWeekRange(summaryWeekOffset);
+    start=range.start;end=range.end;
+    for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(fmtDateKey(d));}
+    const startStr=(start.getMonth()+1)+'/'+start.getDate();
+    const endStr=(end.getMonth()+1)+'/'+end.getDate();
+    document.getElementById('summary-week-label').textContent=startStr+' 〜 '+endStr+' ✎';
+    const nextBtn=document.getElementById('summary-next-btn');
+    if(nextBtn)nextBtn.style.opacity=summaryWeekOffset<0?'1':'0.3';
+    const prevBtn=document.querySelector('.summary-nav-btn:first-child');
+    if(prevBtn)prevBtn.style.opacity='1';
+  }
   const weights=DB.get('weights')||{};
   const sleepHistory=DB.get('sleep_history')||[];
   const dayTypes=getDayTypes();
@@ -1129,21 +1186,29 @@ function renderSummary(){
     html+='<div class="summary-row"><span>記録日数</span><span class="summary-val">'+weekSleep.length+'/7日</span></div>';
   }else{html+='<div style="color:var(--text3);font-size:13px">記録なし</div>';}
   html+='</div>';
-  html+='<div class="copy-btn" onclick="copySummaryForAI()"><div class="copy-btn-title">📋 AIに分析を依頼するテキストをコピー</div><div class="copy-btn-sub">データ＋プロンプトを一発コピー</div></div>';
+  html+='<div class="copy-btn" onclick="copySummaryForAI()"><div class="copy-btn-title">分析用コピー</div></div>';
   document.getElementById('summary-content').innerHTML=html;
 }
 function copySummaryForAI(){
   const NL=String.fromCharCode(10);
-  const {start,end}=getWeekRange(summaryWeekOffset);
-  const startStr=start.getFullYear()+'/'+(start.getMonth()+1)+'/'+start.getDate();
-  const endStr=end.getFullYear()+'/'+(end.getMonth()+1)+'/'+end.getDate();
-  const days=[];
-  for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(fmtDateKey(d));}
+  let startStr,endStr,days=[];
+  if(summaryCustomMode&&summaryCustomStart&&summaryCustomEnd){
+    const s=new Date(summaryCustomStart+'T00:00:00');
+    const e=new Date(summaryCustomEnd+'T00:00:00');
+    startStr=s.getFullYear()+'/'+(s.getMonth()+1)+'/'+s.getDate();
+    endStr=e.getFullYear()+'/'+(e.getMonth()+1)+'/'+e.getDate();
+    const d=new Date(s);while(d<=e){days.push(fmtDateKey(d));d.setDate(d.getDate()+1);}
+  } else {
+    const {start,end}=getWeekRange(summaryWeekOffset);
+    startStr=start.getFullYear()+'/'+(start.getMonth()+1)+'/'+start.getDate();
+    endStr=end.getFullYear()+'/'+(end.getMonth()+1)+'/'+end.getDate();
+    for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(fmtDateKey(d));}
+  }
   const weights=DB.get('weights')||{};
   const sleepHistory=DB.get('sleep_history')||[];
   const dayTypes=getDayTypes();
   const groups=getMuscleGroups();
-  const dayNames=['月','火','水','木','金','土','日'];
+  const dayNames=summaryCustomMode?days.map(function(d){return d.slice(5).replace('-','/');}) : ['月','火','水','木','金','土','日'];
   const weekWeights=days.map(d=>weights[d]).filter(Boolean);
   const weightStart=weekWeights[0]||'未記録';
   const weightEnd=weekWeights[weekWeights.length-1]||'未記録';
@@ -1163,12 +1228,14 @@ function copySummaryForAI(){
     if(!d.log.length)return '  '+d.day+'('+d.date.slice(5).replace('-','/')+'): 未記録';
     const vol=Math.round(calcTotalVol(d.log));
     const typeNames=d.types.filter(function(id){return id!=='rest';}).map(function(id){const g=groups.find(function(x){return x.id===id;});return g?g.name:'';}).filter(Boolean).join('・');
-    const exNames=d.log.map(function(e){
+    const exLines=d.log.map(function(e){
       const exVol=Math.round(e.sets.reduce(function(s,set){return s+(set.weight*set.reps);},0));
       const bestSet=e.sets.reduce(function(b,s){return s.weight>b.weight?s:b;},{weight:0,reps:0});
-      return e.name+'('+e.sets.length+'セット,最大'+bestSet.weight+'kg×'+bestSet.reps+'回,ボリューム'+exVol+'kg)';
-    }).join(' / ');
-    return '  '+d.day+'('+d.date.slice(5).replace('-','/')+'): '+(typeNames||'種目未設定')+' ボリューム'+vol+'kg'+NL+'    '+exNames;
+      const e1rm=bestSet.weight>0&&bestSet.reps>0?Math.round(bestSet.weight*(1+bestSet.reps/30)*10)/10:0;
+      const setDetail=e.sets.map(function(s,si){return '      セット'+(si+1)+': '+s.weight+'kg×'+s.reps+'回';}).join(NL);
+      return '    '+e.name+NL+setDetail+NL+'    → 総ボリューム'+exVol+'kg / 推定1RM'+e1rm+'kg';
+    });
+    return '  '+d.day+'('+d.date.slice(5).replace('-','/')+'): '+(typeNames||'種目未設定')+' 総ボリューム'+vol+'kg'+NL+exLines.join(NL);
   });
   const lines=[
     '以下は筋トレ記録アプリ「IRON LOG」の週間データです。分析とアドバイスをお願いします。',
@@ -1221,15 +1288,57 @@ function getWeekRange(offset){
 function fmtDateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function prevWeek(){summaryWeekOffset--;renderSummary();}
 function nextWeek(){if(summaryWeekOffset<0){summaryWeekOffset++;renderSummary();}}
-function renderSummary(){
-  const {start,end}=getWeekRange(summaryWeekOffset);
-  const startStr=(start.getMonth()+1)+'/'+start.getDate();
-  const endStr=(end.getMonth()+1)+'/'+end.getDate();
-  document.getElementById('summary-week-label').textContent=startStr+' 〜 '+endStr;
+function toggleCustomRange(){
+  const el=document.getElementById('summary-custom-range');
+  if(el)el.style.display=el.style.display==='none'?'block':'none';
+}
+function applyCustomRange(){
+  const s=document.getElementById('summary-start-date').value;
+  const e=document.getElementById('summary-end-date').value;
+  if(!s||!e){toast('⚠ 開始日と終了日を入力してください','#cc3300');return;}
+  if(s>e){toast('⚠ 開始日は終了日より前にしてください','#cc3300');return;}
+  summaryCustomMode=true;
+  summaryCustomStart=s;
+  summaryCustomEnd=e;
+  document.getElementById('summary-custom-range').style.display='none';
+  const prevBtn=document.querySelector('.summary-nav-btn:first-child');
   const nextBtn=document.getElementById('summary-next-btn');
-  if(nextBtn)nextBtn.style.opacity=summaryWeekOffset<0?'1':'0.3';
-  const days=[];
-  for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(fmtDateKey(d));}
+  if(prevBtn)prevBtn.style.opacity='0.3';
+  if(nextBtn)nextBtn.style.opacity='0.3';
+  renderSummary();
+}
+function resetToWeekMode(){
+  summaryCustomMode=false;summaryCustomStart=null;summaryCustomEnd=null;
+  summaryWeekOffset=0;
+  document.getElementById('summary-custom-range').style.display='none';
+  renderSummary();
+}
+function renderSummary(){
+  let start,end,days=[];
+  if(summaryCustomMode&&summaryCustomStart&&summaryCustomEnd){
+    start=new Date(summaryCustomStart+'T00:00:00');
+    end=new Date(summaryCustomEnd+'T00:00:00');
+    const d=new Date(start);
+    while(d<=end){days.push(fmtDateKey(d));d.setDate(d.getDate()+1);}
+    const startStr=(start.getMonth()+1)+'/'+start.getDate();
+    const endStr=(end.getMonth()+1)+'/'+end.getDate();
+    document.getElementById('summary-week-label').textContent=startStr+' 〜 '+endStr+' ✎';
+    const prevBtn=document.querySelector('.summary-nav-btn:first-child');
+    const nextBtn=document.getElementById('summary-next-btn');
+    if(prevBtn)prevBtn.style.opacity='0.3';
+    if(nextBtn)nextBtn.style.opacity='0.3';
+  } else {
+    const range=getWeekRange(summaryWeekOffset);
+    start=range.start;end=range.end;
+    for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(fmtDateKey(d));}
+    const startStr=(start.getMonth()+1)+'/'+start.getDate();
+    const endStr=(end.getMonth()+1)+'/'+end.getDate();
+    document.getElementById('summary-week-label').textContent=startStr+' 〜 '+endStr+' ✎';
+    const nextBtn=document.getElementById('summary-next-btn');
+    if(nextBtn)nextBtn.style.opacity=summaryWeekOffset<0?'1':'0.3';
+    const prevBtn=document.querySelector('.summary-nav-btn:first-child');
+    if(prevBtn)prevBtn.style.opacity='1';
+  }
   const weights=DB.get('weights')||{};
   const sleepHistory=DB.get('sleep_history')||[];
   const dayTypes=getDayTypes();
@@ -1274,10 +1383,18 @@ function renderSummary(){
       const vol=Math.round(calcTotalVol(d.log));
       const typeNames=d.types.filter(function(id){return id!=='rest';}).map(function(id){const g=groups.find(function(x){return x.id===id;});return g?g.name:'';}).filter(Boolean).join('・');
       const isRest=d.types.includes('rest');
-      const p=['<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #1a1a1a">'];
-      p.push('<span style="color:var(--text2)">'+dayNames[i]+'('+d.date.slice(5).replace('-','/')+')'+(typeNames?' ['+typeNames+']':'')+'</span>');
-      p.push('<span style="font-size:14px">'+(isRest?'😴 休筋日':vol?vol+'kg':'--')+'</span></div>');
-      html+=p.join('');
+      const dayLabel=summaryCustomMode?d.date.slice(5).replace('-','/'):dayNames[i]+'('+d.date.slice(5).replace('-','/')+')';
+      html+='<div style="padding:6px 0;border-bottom:1px solid #1a1a1a">';
+      html+='<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">'+dayLabel+(typeNames?' ['+typeNames+']':'')+'</span><span style="font-size:14px">'+(isRest?'😴 休筋日':vol?vol+'kg':'--')+'</span></div>';
+      if(!isRest&&d.log.length){
+        d.log.forEach(function(ex){
+          const bestSet=ex.sets.reduce(function(b,s){return s.weight>b.weight?s:b;},{weight:0,reps:0});
+          const exVol=Math.round(ex.sets.reduce(function(s,set){return s+(set.weight*set.reps);},0));
+          const e1rm=bestSet.weight>0&&bestSet.reps>0?Math.round(bestSet.weight*(1+bestSet.reps/30)*10)/10:0;
+          html+='<div style="font-size:11px;color:var(--text2);padding:2px 0 2px 8px">'+ex.name+' '+ex.sets.length+'セット / 最大'+bestSet.weight+'kg×'+bestSet.reps+'回 / ボリューム'+exVol+'kg'+(e1rm?' / 推定1RM '+e1rm+'kg':'')+'</div>';
+        });
+      }
+      html+='</div>';
     });
     html+='</div>';
   }
@@ -1289,21 +1406,29 @@ function renderSummary(){
     html+='<div class="summary-row"><span>記録日数</span><span class="summary-val">'+weekSleep.length+'/7日</span></div>';
   }else{html+='<div style="color:var(--text3);font-size:13px">記録なし</div>';}
   html+='</div>';
-  html+='<div class="copy-btn" onclick="copySummaryForAI()"><div class="copy-btn-title">📋 AIに分析を依頼するテキストをコピー</div><div class="copy-btn-sub">データ＋プロンプトを一発コピー</div></div>';
+  html+='<div class="copy-btn" onclick="copySummaryForAI()"><div class="copy-btn-title">📋 AIにコピー</div></div>';
   document.getElementById('summary-content').innerHTML=html;
 }
 function copySummaryForAI(){
   const NL=String.fromCharCode(10);
-  const {start,end}=getWeekRange(summaryWeekOffset);
-  const startStr=start.getFullYear()+'/'+(start.getMonth()+1)+'/'+start.getDate();
-  const endStr=end.getFullYear()+'/'+(end.getMonth()+1)+'/'+end.getDate();
-  const days=[];
-  for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(fmtDateKey(d));}
+  let startStr,endStr,days=[];
+  if(summaryCustomMode&&summaryCustomStart&&summaryCustomEnd){
+    const s=new Date(summaryCustomStart+'T00:00:00');
+    const e=new Date(summaryCustomEnd+'T00:00:00');
+    startStr=s.getFullYear()+'/'+(s.getMonth()+1)+'/'+s.getDate();
+    endStr=e.getFullYear()+'/'+(e.getMonth()+1)+'/'+e.getDate();
+    const d=new Date(s);while(d<=e){days.push(fmtDateKey(d));d.setDate(d.getDate()+1);}
+  } else {
+    const {start,end}=getWeekRange(summaryWeekOffset);
+    startStr=start.getFullYear()+'/'+(start.getMonth()+1)+'/'+start.getDate();
+    endStr=end.getFullYear()+'/'+(end.getMonth()+1)+'/'+end.getDate();
+    for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(fmtDateKey(d));}
+  }
   const weights=DB.get('weights')||{};
   const sleepHistory=DB.get('sleep_history')||[];
   const dayTypes=getDayTypes();
   const groups=getMuscleGroups();
-  const dayNames=['月','火','水','木','金','土','日'];
+  const dayNames=summaryCustomMode?days.map(function(d){return d.slice(5).replace('-','/');}) : ['月','火','水','木','金','土','日'];
   const weekWeights=days.map(d=>weights[d]).filter(Boolean);
   const weightStart=weekWeights[0]||'未記録';
   const weightEnd=weekWeights[weekWeights.length-1]||'未記録';
@@ -1323,12 +1448,14 @@ function copySummaryForAI(){
     if(!d.log.length)return '  '+d.day+'('+d.date.slice(5).replace('-','/')+'): 未記録';
     const vol=Math.round(calcTotalVol(d.log));
     const typeNames=d.types.filter(function(id){return id!=='rest';}).map(function(id){const g=groups.find(function(x){return x.id===id;});return g?g.name:'';}).filter(Boolean).join('・');
-    const exNames=d.log.map(function(e){
+    const exLines=d.log.map(function(e){
       const exVol=Math.round(e.sets.reduce(function(s,set){return s+(set.weight*set.reps);},0));
       const bestSet=e.sets.reduce(function(b,s){return s.weight>b.weight?s:b;},{weight:0,reps:0});
-      return e.name+'('+e.sets.length+'セット,最大'+bestSet.weight+'kg×'+bestSet.reps+'回,ボリューム'+exVol+'kg)';
-    }).join(' / ');
-    return '  '+d.day+'('+d.date.slice(5).replace('-','/')+'): '+(typeNames||'種目未設定')+' ボリューム'+vol+'kg'+NL+'    '+exNames;
+      const e1rm=bestSet.weight>0&&bestSet.reps>0?Math.round(bestSet.weight*(1+bestSet.reps/30)*10)/10:0;
+      const setDetail=e.sets.map(function(s,si){return '      セット'+(si+1)+': '+s.weight+'kg×'+s.reps+'回';}).join(NL);
+      return '    '+e.name+NL+setDetail+NL+'    → 総ボリューム'+exVol+'kg / 推定1RM'+e1rm+'kg';
+    });
+    return '  '+d.day+'('+d.date.slice(5).replace('-','/')+'): '+(typeNames||'種目未設定')+' 総ボリューム'+vol+'kg'+NL+exLines.join(NL);
   });
   const lines=[
     '以下は筋トレ記録アプリ「IRON LOG」の週間データです。分析とアドバイスをお願いします。',
