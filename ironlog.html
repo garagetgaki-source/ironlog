@@ -798,6 +798,12 @@ function closeTodayModal(){
   const dt=getDayTypes();
   dt[today()]=tempSelectedMuscles;
   DB.set('day_types',dt);
+  // 選んだ部位のアコーディオンを開く
+  const groups=getMuscleGroups();
+  tempSelectedMuscles.forEach(function(id){
+    const g=groups.find(function(x){return x.id===id;});
+    if(g)openAccordions.add(g.name);
+  });
   closeTodayModal();
   renderDashboard();
   toast('✓ 今日の部位を記録しました！');
@@ -1543,11 +1549,24 @@ const TIMER_MSGS=[
   'もう一度やり切れ。それだけだ ⚡','限界を超えるのが筋トレの本質 💥','呼吸を整えろ。次が本番 🌬️',
   '疲れた時こそ、成長のチャンス 📈','最後まで諦めない奴が強くなる 🦾','今日の頑張りが明日の自分を作る 🏆',
   'セット間の休息も大事。しっかり回復 🧘','筋肥大には十分な休息が必要。焦るな ⏱️','ネガティブ動作もゆっくり意識して 🎯',
+  '次のセットのフォームをイメージしろ 🧠','深呼吸して酸素を取り込め 🌬️ 次も全力でいく！','インターバル中にターゲット筋を軽くほぐせ 🤸',
+  '水分補給を忘れるな 💧 体のパフォーマンスが変わる','次のセット、重量を上げる準備はできてるか？ 📈','筋肉痛は成長の証 💪 追い込めてる証拠だ！',
+  'ここで休んでる間も、筋肉は修復されてる 🔬','次のセットはもっと丁寧に、もっと重く 🎯','今日のインターバルが短いほど、強さが増す ⏰',
+  '呼吸法：吸って止めて、力む瞬間に吐け 🌬️','筋電図で測れば今一番活性化してる 📊 追い込め！','休息は次のセットへの投資だ 💎',
+  '次のセット、PRを狙え 🏆 絶対できる！','今この瞬間、全国の筋トレ仲間も追い込んでる 🌏','ゆっくり深呼吸。心拍を整えて集中 💆',
+  '次のセットで今日一番の力を出せ 🔥','インターバルに入ったら頭の中でフォームを確認しろ 🧠','休んでいる間も勝負は続いている 💪 次で決めろ！',
 ];
 const SESSION_MOTIV_MSGS=[
   'さあ始めよう。今日も全力で 🔥','ウォームアップは完璧か？行くぞ 💪','今日のトレーニングで強くなれ ⚡',
   '集中しろ。ここからが本番だ 👊','限界を超えた先に成長がある 📈','最高の自分を作る時間が始まった 🦾',
   'フォームを意識して、丁寧に追い込め 🎯','筋肉に語りかけるように動かせ 🧠','今日も昨日の自分を超えていけ 🏆',
+  'ネガティブな気持ちは全部バーベルに乗せろ 💥','重いバーベルを上げる度に昨日の自分を超えてる 🏋️','今夜のボリューム、過去最高を目指せ 📊',
+  '全力でやって後悔した奴はいない 💪','筋肉はこのセットの積み重ねで作られる 📈','今日のトレーニングが3ヶ月後の自分を決める 🎯',
+  'ここに来た時点でもう勝ってる 🥇','今この瞬間も、体が変わり続けている 💥','一セット一セット、魂込めて追い込め ⚡',
+  '追い込んだ後のプロテイン、最高に美味いぞ 🥛','今夜のトレーニングを終えた自分を想像しろ 🔥','限界なんてまだまだ先だ 🚀',
+  'インターバルの間も集中を切らすな 🧠','今夜のジムに来た自分を誇れ 🏆','体が悲鳴を上げる瞬間が一番成長してる瞬間だ 🔥',
+  '今夜もPRを更新する気持ちで行こう 📊','汗を流した後の帰り道、最高に気持ちいいだろ 🌙','フォームを崩すな。怪我は最大の敵だ ⚠️',
+  '今日のセッションが最高になるかは最初の一セットで決まる 🎯','強くなりたいと思ってここに来た。それだけで勝ち組だ 🥇','続けてる奴だけが結果を手にできる 🦾',
 ];
 async function startSessionMotivation(){
   if(motivFetched)return;
@@ -1558,22 +1577,10 @@ async function startSessionMotivation(){
   if(motivInterval)clearInterval(motivInterval);
   motivInterval=setInterval(()=>fetchAndShowMotiv(),10000);
 }
-async function fetchAndShowMotiv(){
-  try{
-    const res=await fetch('https://ironlog-proxy.garage-tgaki.workers.dev',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',max_tokens:80,
-        messages:[{role:'user',content:'筋トレセッション中に表示する、モチベが上がる短い日本語メッセージを1つだけ作って。1〜2文、絵文字あり、熱くなれるもの。メッセージ本文のみ返すこと。'}]
-      })
-    });
-    const data=await res.json();
-    const text=data.content&&data.content[0]?data.content[0].text.trim():'';
-    if(text)showMotivMsg(text);
-  }catch(e){
-    showMotivMsg(SESSION_MOTIV_MSGS[Math.floor(Math.random()*SESSION_MOTIV_MSGS.length)]);
-  }
+function fetchAndShowMotiv(){
+  const msgs=SESSION_MOTIV_MSGS;
+  const msg=msgs[Math.floor(Math.random()*msgs.length)];
+  showMotivMsg(msg);
 }
 function showMotivMsg(msg){
   const el=document.getElementById('session-motivation');
@@ -1603,30 +1610,14 @@ function updateTimerDisplay(){
   const el=document.getElementById('timer-display-'+timerExIdx);
   if(el)el.textContent=fmtTimer(timerSecs);
 }
-async function fetchTimerMsg(ei,fallback){
+function fetchTimerMsg(ei,fallback){
   loadTodayTraining();
   const exName=sessionExercises[ei]?sessionExercises[ei].name:'';
-  const msgEl=document.getElementById('timer-msg-'+ei);
-  if(msgEl)msgEl.innerHTML='<span style="opacity:0.6">✨ AIメッセージ生成中...</span>';
-  try{
-    const res=await fetch('https://ironlog-proxy.garage-tgaki.workers.dev',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',max_tokens:120,
-        messages:[{role:'user',content:`筋トレのインターバル休憩中に表示する日本語メッセージを1つだけ作って。種目は「${exName}」。インターバル中に実践できる有益なTIPS（呼吸法・ストレッチ・次セットの意識など）とモチベが上がる一言を組み合わせて。2〜3文、絵文字あり。本文のみ返すこと。`}]
-      })
-    });
-    const data=await res.json();
-    const text=data.content&&data.content[0]?data.content[0].text:fallback;
-    timerMsgCache=text;
-    const el=document.getElementById('timer-msg-'+timerExIdx);
-    if(el)el.innerHTML=text;
-  }catch(e){
-    timerMsgCache=fallback;
-    const el=document.getElementById('timer-msg-'+timerExIdx);
-    if(el)el.innerHTML=fallback;
-  }
+  const msgs=TIMER_MSGS;
+  const msg=msgs[Math.floor(Math.random()*msgs.length)];
+  timerMsgCache=msg;
+  const el=document.getElementById('timer-msg-'+timerExIdx);
+  if(el)el.innerHTML=msg;
 }
 
 // =====================
