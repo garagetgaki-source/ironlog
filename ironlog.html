@@ -198,6 +198,19 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
 .accordion-arrow.open{transform:rotate(180deg)}
 .accordion-body{display:none;background:var(--surface);padding:8px}
 .accordion-body.open{display:block}
+.summary-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.summary-nav-btn{background:var(--surface2);border:1px solid #333;border-radius:8px;padding:8px 16px;color:var(--text2);cursor:pointer;font-size:18px;transition:all .15s}
+.summary-nav-btn:active{border-color:var(--accent);color:var(--accent)}
+.summary-week-label{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700}
+.summary-section{background:var(--surface);border:1px solid #222;border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.summary-section-title{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:10px}
+.summary-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1a1a1a;font-size:13px}
+.summary-row:last-child{border-bottom:none}
+.summary-val{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700}
+.copy-btn{background:linear-gradient(135deg,#1a1000,#2a1a00);border:2px solid var(--gold);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;margin-top:8px;transition:all .15s}
+.copy-btn:active{transform:scale(0.98)}
+.copy-btn-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--gold);letter-spacing:1px}
+.copy-btn-sub{font-size:12px;color:#cc9900;margin-top:2px}
 .preset-edit-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .preset-edit-row .inp{height:38px;font-size:14px;padding:6px 10px}
 .ai-comment-card{background:linear-gradient(135deg,#0d0d1a,#0a1a0d);border:1px solid #333;border-radius:var(--radius);padding:16px;margin-bottom:14px;position:relative;overflow:hidden}
@@ -516,7 +529,20 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
     <button class="btn btn-primary" onclick="saveSleep()">SAVE RECORD 💤</button>
     <div class="section-title" style="margin-top:16px">直近の記録</div>
     <div id="sleep-history"></div>
-  </div>  <nav class="nav">
+  </div>  <!-- SUMMARY -->
+  <div class="screen" id="screen-summary">
+    <div class="screen-header">
+      <div class="screen-title">週報<span>.</span></div>
+    </div>
+    <div class="summary-nav">
+      <div class="summary-nav-btn" onclick="prevWeek()">‹</div>
+      <div class="summary-week-label" id="summary-week-label"></div>
+      <div class="summary-nav-btn" id="summary-next-btn" onclick="nextWeek()">›</div>
+    </div>
+    <div id="summary-content"></div>
+  </div>
+
+  <nav class="nav">
     <button class="nav-btn active" id="nav-dash" onclick="showScreen('dash')">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>ダッシュ
     </button>
@@ -531,6 +557,9 @@ html,body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans
     </button>
     <button class="nav-btn" id="nav-sleep" onclick="showScreen('sleep')">
       <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>睡眠
+    </button>
+    <button class="nav-btn" id="nav-summary" onclick="showScreen('summary')">
+      <svg viewBox="0 0 24 24"><path d="M3 3h18v4H3zM3 10h12v4H3zM3 17h8v4H3z"/></svg>週報
     </button>
   </nav>
 </div><script>
@@ -1019,7 +1048,325 @@ function showDashMsg(){
 }
 
 // =====================
+// 週間サマリー
+// =====================
+let summaryWeekOffset=0;
+function getWeekRange(offset){
+  const now=new Date();const dow=now.getDay();
+  const monday=new Date(now);monday.setDate(now.getDate()-((dow+6)%7)+offset*7);monday.setHours(0,0,0,0);
+  const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+  return{start:monday,end:sunday};
+}
+function fmtDateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function prevWeek(){summaryWeekOffset--;renderSummary();}
+function nextWeek(){if(summaryWeekOffset<0){summaryWeekOffset++;renderSummary();}}
+function renderSummary(){
+  const {start,end}=getWeekRange(summaryWeekOffset);
+  const startStr=(start.getMonth()+1)+'/'+start.getDate();
+  const endStr=(end.getMonth()+1)+'/'+end.getDate();
+  document.getElementById('summary-week-label').textContent=startStr+' 〜 '+endStr;
+  const nextBtn=document.getElementById('summary-next-btn');
+  if(nextBtn)nextBtn.style.opacity=summaryWeekOffset<0?'1':'0.3';
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(fmtDateKey(d));}
+  const weights=DB.get('weights')||{};
+  const sleepHistory=DB.get('sleep_history')||[];
+  const dayTypes=getDayTypes();
+  const groups=getMuscleGroups();
+  const weekWeights=days.map(d=>weights[d]).filter(Boolean);
+  const weightStart=weekWeights[0]||null;
+  const weightEnd=weekWeights[weekWeights.length-1]||null;
+  const weightDiff=weightStart&&weightEnd?Math.round((weightEnd-weightStart)*10)/10:null;
+  const protDays=days.map(d=>{const log=DB.get('protein_'+d)||[];return Math.round(log.reduce((s,e)=>s+e.g,0));});
+  const protAvg=Math.round(protDays.reduce((s,v)=>s+v,0)/7);
+  const protGoal=getProteinGoal();
+  const protAchieveDays=protDays.filter(v=>v>=protGoal).length;
+  const trainDays=days.map(d=>({date:d,log:DB.get('train_'+d)||[],types:dayTypes[d]||[]}));
+  const activeDays=trainDays.filter(d=>d.log.length>0);
+  const restDays=trainDays.filter(d=>d.types.includes('rest'));
+  const totalVol=Math.round(activeDays.reduce((s,d)=>s+calcTotalVol(d.log),0));
+  const weekSleep=days.map(d=>sleepHistory.find(r=>r.date===d)).filter(Boolean);
+  const sleepAvgH=weekSleep.length?Math.round(weekSleep.reduce((s,r)=>s+r.hours,0)/weekSleep.length*10)/10:null;
+  const sleepAvgScore=weekSleep.length?Math.round(weekSleep.reduce((s,r)=>s+calcSleepScore(r.hours,r.quality,r.fatigue),0)/weekSleep.length*10)/10:null;
+  const dayNames=['月','火','水','木','金','土','日'];
+  let html='';
+  html+='<div class="summary-section"><div class="summary-section-title">⚖️ 体重</div>';
+  if(weekWeights.length){
+    html+='<div class="summary-row"><span>週始め</span><span class="summary-val">'+weightStart+'kg</span></div>';
+    html+='<div class="summary-row"><span>週末</span><span class="summary-val">'+weightEnd+'kg</span></div>';
+    if(weightDiff!==null){const c=weightDiff>0?'var(--accent)':weightDiff<0?'var(--green)':'var(--text)';html+='<div class="summary-row"><span>増減</span><span class="summary-val" style="color:'+c+'">'+(weightDiff>0?'+':'')+weightDiff+'kg</span></div>';}
+  }else{html+='<div style="color:var(--text3);font-size:13px">記録なし</div>';}
+  html+='</div>';
+  html+='<div class="summary-section"><div class="summary-section-title">💊 タンパク質</div>';
+  html+='<div class="summary-row"><span>1日平均</span><span class="summary-val" style="color:var(--green)">'+protAvg+'g</span></div>';
+  html+='<div class="summary-row"><span>目標達成日数</span><span class="summary-val">'+protAchieveDays+'/7日</span></div>';
+  html+='<div class="summary-row"><span>目標</span><span class="summary-val">'+protGoal+'g/日</span></div>';
+  html+='</div>';
+  html+='<div class="summary-section"><div class="summary-section-title">🏋️ トレーニング</div>';
+  html+='<div class="summary-row"><span>トレ日数</span><span class="summary-val">'+activeDays.length+'日</span></div>';
+  html+='<div class="summary-row"><span>休筋日</span><span class="summary-val">'+restDays.length+'日</span></div>';
+  html+='<div class="summary-row"><span>週間総ボリューム</span><span class="summary-val" style="color:var(--blue)">'+totalVol.toLocaleString()+'kg</span></div>';
+  if(activeDays.length||restDays.length){
+    html+='<div style="margin-top:10px">';
+    trainDays.forEach(function(d,i){
+      if(!d.log.length&&!d.types.includes('rest'))return;
+      const vol=Math.round(calcTotalVol(d.log));
+      const typeNames=d.types.filter(function(id){return id!=='rest';}).map(function(id){const g=groups.find(function(x){return x.id===id;});return g?g.name:'';}).filter(Boolean).join('・');
+      const isRest=d.types.includes('rest');
+      const parts=['<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #1a1a1a">'];
+      parts.push('<span style="color:var(--text2)">'+dayNames[i]+'('+d.date.slice(5).replace('-','/')+')'+(typeNames?' ['+typeNames+']':'')+'</span>');
+      parts.push('<span style="font-size:14px">'+(isRest?'😴 休筋日':vol?vol+'kg':'--')+'</span>');
+      parts.push('</div>');
+      html+=parts.join('');;
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  html+='<div class="summary-section"><div class="summary-section-title">🌙 睡眠・回復</div>';
+  if(weekSleep.length){
+    html+='<div class="summary-row"><span>平均睡眠時間</span><span class="summary-val">'+sleepAvgH+'h</span></div>';
+    html+='<div class="summary-row"><span>平均回復スコア</span><span class="summary-val" style="color:var(--gold)">'+sleepAvgScore+'/10</span></div>';
+    html+='<div class="summary-row"><span>記録日数</span><span class="summary-val">'+weekSleep.length+'/7日</span></div>';
+  }else{html+='<div style="color:var(--text3);font-size:13px">記録なし</div>';}
+  html+='</div>';
+  html+='<div class="copy-btn" onclick="copySummaryForAI()"><div class="copy-btn-title">📋 AIに分析を依頼するテキストをコピー</div><div class="copy-btn-sub">データ＋プロンプトを一発コピー</div></div>';
+  document.getElementById('summary-content').innerHTML=html;
+}
+function copySummaryForAI(){
+  const NL=String.fromCharCode(10);
+  const {start,end}=getWeekRange(summaryWeekOffset);
+  const startStr=start.getFullYear()+'/'+(start.getMonth()+1)+'/'+start.getDate();
+  const endStr=end.getFullYear()+'/'+(end.getMonth()+1)+'/'+end.getDate();
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(fmtDateKey(d));}
+  const weights=DB.get('weights')||{};
+  const sleepHistory=DB.get('sleep_history')||[];
+  const dayTypes=getDayTypes();
+  const groups=getMuscleGroups();
+  const dayNames=['月','火','水','木','金','土','日'];
+  const weekWeights=days.map(d=>weights[d]).filter(Boolean);
+  const weightStart=weekWeights[0]||'未記録';
+  const weightEnd=weekWeights[weekWeights.length-1]||'未記録';
+  const weightDiff=weekWeights.length>=2?Math.round((weekWeights[weekWeights.length-1]-weekWeights[0])*10)/10:null;
+  const protDays=days.map(d=>{const log=DB.get('protein_'+d)||[];return Math.round(log.reduce((s,e)=>s+e.g,0));});
+  const protAvg=Math.round(protDays.reduce((s,v)=>s+v,0)/7);
+  const protGoal=getProteinGoal();
+  const protAchieveDays=protDays.filter(v=>v>=protGoal).length;
+  const trainDays=days.map(function(d,i){return{date:d,day:dayNames[i],log:DB.get('train_'+d)||[],types:dayTypes[d]||[]};});
+  const activeDays=trainDays.filter(d=>d.log.length>0);
+  const totalVol=Math.round(activeDays.reduce((s,d)=>s+calcTotalVol(d.log),0));
+  const weekSleep=days.map(d=>sleepHistory.find(r=>r.date===d)).filter(Boolean);
+  const sleepAvgH=weekSleep.length?Math.round(weekSleep.reduce((s,r)=>s+r.hours,0)/weekSleep.length*10)/10:'未記録';
+  const sleepAvgScore=weekSleep.length?Math.round(weekSleep.reduce((s,r)=>s+calcSleepScore(r.hours,r.quality,r.fatigue),0)/weekSleep.length*10)/10:'未記録';
+  const trainLines=trainDays.map(function(d){
+    if(d.types.includes('rest'))return '  '+d.day+'('+d.date.slice(5).replace('-','/')+'): 休筋日';
+    if(!d.log.length)return '  '+d.day+'('+d.date.slice(5).replace('-','/')+'): 未記録';
+    const vol=Math.round(calcTotalVol(d.log));
+    const typeNames=d.types.filter(function(id){return id!=='rest';}).map(function(id){const g=groups.find(function(x){return x.id===id;});return g?g.name:'';}).filter(Boolean).join('・');
+    const exNames=d.log.map(function(e){
+      const exVol=Math.round(e.sets.reduce(function(s,set){return s+(set.weight*set.reps);},0));
+      const bestSet=e.sets.reduce(function(b,s){return s.weight>b.weight?s:b;},{weight:0,reps:0});
+      return e.name+'('+e.sets.length+'セット,最大'+bestSet.weight+'kg×'+bestSet.reps+'回,ボリューム'+exVol+'kg)';
+    }).join(' / ');
+    return '  '+d.day+'('+d.date.slice(5).replace('-','/')+'): '+(typeNames||'種目未設定')+' ボリューム'+vol+'kg'+NL+'    '+exNames;
+  });
+  const lines=[
+    '以下は筋トレ記録アプリ「IRON LOG」の週間データです。分析とアドバイスをお願いします。',
+    '',
+    '【対象期間】'+startStr+' 〜 '+endStr,
+    '',
+    '【体重】',
+    '・週始め: '+weightStart+'kg',
+    '・週末: '+weightEnd+'kg',
+    '・増減: '+(weightDiff!==null?(weightDiff>0?'+':'')+weightDiff+'kg':'不明'),
+    '',
+    '【タンパク質】',
+    '・1日平均: '+protAvg+'g（目標: '+protGoal+'g/日）',
+    '・目標達成日数: '+protAchieveDays+'/7日',
+    '・各日: '+protDays.map(function(g,i){return dayNames[i]+g+'g';}).join(', '),
+    '',
+    '【トレーニング】',
+    '・トレ日数: '+activeDays.length+'日 / 週間総ボリューム: '+totalVol.toLocaleString()+'kg',
+  ].concat(trainLines).concat([
+    '',
+    '【睡眠・回復】',
+    '・平均睡眠時間: '+sleepAvgH+'h',
+    '・平均回復スコア: '+sleepAvgScore+'/10',
+    '',
+    '【分析依頼】',
+    '上記データをもとに以下を教えてください：',
+    '1. 今週の総評（体重・タンパク質・トレーニング・睡眠の観点から）',
+    '2. 先週と比較できるデータがあれば変化と傾向',
+    '3. 来週に向けた具体的なアドバイス（改善点・継続すべき点）',
+    '4. 特に注目すべき数値や気になる点',
+  ]);
+  navigator.clipboard.writeText(lines.join(NL)).then(function(){
+    toast('✓ クリップボードにコピーしました！');
+  }).catch(function(){
+    toast('⚠ コピーに失敗しました','#cc3300');
+  });
+}
+
+// =====================
 // インターバルタイマー
+// =====================
+// 週間サマリー
+// =====================
+function getWeekRange(offset){
+  const now=new Date();const dow=now.getDay();
+  const monday=new Date(now);monday.setDate(now.getDate()-((dow+6)%7)+offset*7);monday.setHours(0,0,0,0);
+  const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+  return{start:monday,end:sunday};
+}
+function fmtDateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function prevWeek(){summaryWeekOffset--;renderSummary();}
+function nextWeek(){if(summaryWeekOffset<0){summaryWeekOffset++;renderSummary();}}
+function renderSummary(){
+  const {start,end}=getWeekRange(summaryWeekOffset);
+  const startStr=(start.getMonth()+1)+'/'+start.getDate();
+  const endStr=(end.getMonth()+1)+'/'+end.getDate();
+  document.getElementById('summary-week-label').textContent=startStr+' 〜 '+endStr;
+  const nextBtn=document.getElementById('summary-next-btn');
+  if(nextBtn)nextBtn.style.opacity=summaryWeekOffset<0?'1':'0.3';
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(fmtDateKey(d));}
+  const weights=DB.get('weights')||{};
+  const sleepHistory=DB.get('sleep_history')||[];
+  const dayTypes=getDayTypes();
+  const groups=getMuscleGroups();
+  const weekWeights=days.map(d=>weights[d]).filter(Boolean);
+  const weightStart=weekWeights[0]||null;
+  const weightEnd=weekWeights[weekWeights.length-1]||null;
+  const weightDiff=weightStart&&weightEnd?Math.round((weightEnd-weightStart)*10)/10:null;
+  const protDays=days.map(d=>{const log=DB.get('protein_'+d)||[];return Math.round(log.reduce((s,e)=>s+e.g,0));});
+  const protAvg=Math.round(protDays.reduce((s,v)=>s+v,0)/7);
+  const protGoal=getProteinGoal();
+  const protAchieveDays=protDays.filter(v=>v>=protGoal).length;
+  const trainDays=days.map(d=>({date:d,log:DB.get('train_'+d)||[],types:dayTypes[d]||[]}));
+  const activeDays=trainDays.filter(d=>d.log.length>0);
+  const restDays=trainDays.filter(d=>d.types.includes('rest'));
+  const totalVol=Math.round(activeDays.reduce((s,d)=>s+calcTotalVol(d.log),0));
+  const weekSleep=days.map(d=>sleepHistory.find(r=>r.date===d)).filter(Boolean);
+  const sleepAvgH=weekSleep.length?Math.round(weekSleep.reduce((s,r)=>s+r.hours,0)/weekSleep.length*10)/10:null;
+  const sleepAvgScore=weekSleep.length?Math.round(weekSleep.reduce((s,r)=>s+calcSleepScore(r.hours,r.quality,r.fatigue),0)/weekSleep.length*10)/10:null;
+  const dayNames=['月','火','水','木','金','土','日'];
+  let html='';
+  html+='<div class="summary-section"><div class="summary-section-title">⚖️ 体重</div>';
+  if(weekWeights.length){
+    html+='<div class="summary-row"><span>週始め</span><span class="summary-val">'+weightStart+'kg</span></div>';
+    html+='<div class="summary-row"><span>週末</span><span class="summary-val">'+weightEnd+'kg</span></div>';
+    if(weightDiff!==null){const c=weightDiff>0?'var(--accent)':weightDiff<0?'var(--green)':'var(--text)';html+='<div class="summary-row"><span>増減</span><span class="summary-val" style="color:'+c+'">'+(weightDiff>0?'+':'')+weightDiff+'kg</span></div>';}
+  }else{html+='<div style="color:var(--text3);font-size:13px">記録なし</div>';}
+  html+='</div>';
+  html+='<div class="summary-section"><div class="summary-section-title">💊 タンパク質</div>';
+  html+='<div class="summary-row"><span>1日平均</span><span class="summary-val" style="color:var(--green)">'+protAvg+'g</span></div>';
+  html+='<div class="summary-row"><span>目標達成日数</span><span class="summary-val">'+protAchieveDays+'/7日</span></div>';
+  html+='<div class="summary-row"><span>目標</span><span class="summary-val">'+protGoal+'g/日</span></div>';
+  html+='</div>';
+  html+='<div class="summary-section"><div class="summary-section-title">🏋️ トレーニング</div>';
+  html+='<div class="summary-row"><span>トレ日数</span><span class="summary-val">'+activeDays.length+'日</span></div>';
+  html+='<div class="summary-row"><span>休筋日</span><span class="summary-val">'+restDays.length+'日</span></div>';
+  html+='<div class="summary-row"><span>週間総ボリューム</span><span class="summary-val" style="color:var(--blue)">'+totalVol.toLocaleString()+'kg</span></div>';
+  if(activeDays.length||restDays.length){
+    html+='<div style="margin-top:10px">';
+    trainDays.forEach(function(d,i){
+      if(!d.log.length&&!d.types.includes('rest'))return;
+      const vol=Math.round(calcTotalVol(d.log));
+      const typeNames=d.types.filter(function(id){return id!=='rest';}).map(function(id){const g=groups.find(function(x){return x.id===id;});return g?g.name:'';}).filter(Boolean).join('・');
+      const isRest=d.types.includes('rest');
+      const p=['<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #1a1a1a">'];
+      p.push('<span style="color:var(--text2)">'+dayNames[i]+'('+d.date.slice(5).replace('-','/')+')'+(typeNames?' ['+typeNames+']':'')+'</span>');
+      p.push('<span style="font-size:14px">'+(isRest?'😴 休筋日':vol?vol+'kg':'--')+'</span></div>');
+      html+=p.join('');
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  html+='<div class="summary-section"><div class="summary-section-title">🌙 睡眠・回復</div>';
+  if(weekSleep.length){
+    html+='<div class="summary-row"><span>平均睡眠時間</span><span class="summary-val">'+sleepAvgH+'h</span></div>';
+    html+='<div class="summary-row"><span>平均回復スコア</span><span class="summary-val" style="color:var(--gold)">'+sleepAvgScore+'/10</span></div>';
+    html+='<div class="summary-row"><span>記録日数</span><span class="summary-val">'+weekSleep.length+'/7日</span></div>';
+  }else{html+='<div style="color:var(--text3);font-size:13px">記録なし</div>';}
+  html+='</div>';
+  html+='<div class="copy-btn" onclick="copySummaryForAI()"><div class="copy-btn-title">📋 AIに分析を依頼するテキストをコピー</div><div class="copy-btn-sub">データ＋プロンプトを一発コピー</div></div>';
+  document.getElementById('summary-content').innerHTML=html;
+}
+function copySummaryForAI(){
+  const NL=String.fromCharCode(10);
+  const {start,end}=getWeekRange(summaryWeekOffset);
+  const startStr=start.getFullYear()+'/'+(start.getMonth()+1)+'/'+start.getDate();
+  const endStr=end.getFullYear()+'/'+(end.getMonth()+1)+'/'+end.getDate();
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);days.push(fmtDateKey(d));}
+  const weights=DB.get('weights')||{};
+  const sleepHistory=DB.get('sleep_history')||[];
+  const dayTypes=getDayTypes();
+  const groups=getMuscleGroups();
+  const dayNames=['月','火','水','木','金','土','日'];
+  const weekWeights=days.map(d=>weights[d]).filter(Boolean);
+  const weightStart=weekWeights[0]||'未記録';
+  const weightEnd=weekWeights[weekWeights.length-1]||'未記録';
+  const weightDiff=weekWeights.length>=2?Math.round((weekWeights[weekWeights.length-1]-weekWeights[0])*10)/10:null;
+  const protDays=days.map(d=>{const log=DB.get('protein_'+d)||[];return Math.round(log.reduce((s,e)=>s+e.g,0));});
+  const protAvg=Math.round(protDays.reduce((s,v)=>s+v,0)/7);
+  const protGoal=getProteinGoal();
+  const protAchieveDays=protDays.filter(v=>v>=protGoal).length;
+  const trainDays=days.map(function(d,i){return{date:d,day:dayNames[i],log:DB.get('train_'+d)||[],types:dayTypes[d]||[]};});
+  const activeDays=trainDays.filter(d=>d.log.length>0);
+  const totalVol=Math.round(activeDays.reduce((s,d)=>s+calcTotalVol(d.log),0));
+  const weekSleep=days.map(d=>sleepHistory.find(r=>r.date===d)).filter(Boolean);
+  const sleepAvgH=weekSleep.length?Math.round(weekSleep.reduce((s,r)=>s+r.hours,0)/weekSleep.length*10)/10:'未記録';
+  const sleepAvgScore=weekSleep.length?Math.round(weekSleep.reduce((s,r)=>s+calcSleepScore(r.hours,r.quality,r.fatigue),0)/weekSleep.length*10)/10:'未記録';
+  const trainLines=trainDays.map(function(d){
+    if(d.types.includes('rest'))return '  '+d.day+'('+d.date.slice(5).replace('-','/')+'): 休筋日';
+    if(!d.log.length)return '  '+d.day+'('+d.date.slice(5).replace('-','/')+'): 未記録';
+    const vol=Math.round(calcTotalVol(d.log));
+    const typeNames=d.types.filter(function(id){return id!=='rest';}).map(function(id){const g=groups.find(function(x){return x.id===id;});return g?g.name:'';}).filter(Boolean).join('・');
+    const exNames=d.log.map(function(e){
+      const exVol=Math.round(e.sets.reduce(function(s,set){return s+(set.weight*set.reps);},0));
+      const bestSet=e.sets.reduce(function(b,s){return s.weight>b.weight?s:b;},{weight:0,reps:0});
+      return e.name+'('+e.sets.length+'セット,最大'+bestSet.weight+'kg×'+bestSet.reps+'回,ボリューム'+exVol+'kg)';
+    }).join(' / ');
+    return '  '+d.day+'('+d.date.slice(5).replace('-','/')+'): '+(typeNames||'種目未設定')+' ボリューム'+vol+'kg'+NL+'    '+exNames;
+  });
+  const lines=[
+    '以下は筋トレ記録アプリ「IRON LOG」の週間データです。分析とアドバイスをお願いします。',
+    '',
+    '【対象期間】'+startStr+' 〜 '+endStr,
+    '',
+    '【体重】',
+    '・週始め: '+weightStart+'kg',
+    '・週末: '+weightEnd+'kg',
+    '・増減: '+(weightDiff!==null?(weightDiff>0?'+':'')+weightDiff+'kg':'不明'),
+    '',
+    '【タンパク質】',
+    '・1日平均: '+protAvg+'g（目標: '+protGoal+'g/日）',
+    '・目標達成日数: '+protAchieveDays+'/7日',
+    '・各日: '+protDays.map(function(g,i){return dayNames[i]+g+'g';}).join(', '),
+    '',
+    '【トレーニング】',
+    '・トレ日数: '+activeDays.length+'日 / 週間総ボリューム: '+totalVol.toLocaleString()+'kg',
+  ].concat(trainLines).concat([
+    '',
+    '【睡眠・回復】',
+    '・平均睡眠時間: '+sleepAvgH+'h',
+    '・平均回復スコア: '+sleepAvgScore+'/10',
+    '',
+    '【分析依頼】',
+    '上記データをもとに以下を教えてください：',
+    '1. 今週の総評（体重・タンパク質・トレーニング・睡眠の観点から）',
+    '2. 先週と比較できるデータがあれば変化と傾向',
+    '3. 来週に向けた具体的なアドバイス（改善点・継続すべき点）',
+    '4. 特に注目すべき数値や気になる点',
+  ]);
+  navigator.clipboard.writeText(lines.join(NL)).then(function(){
+    toast('✓ クリップボードにコピーしました！');
+  }).catch(function(){
+    toast('⚠ コピーに失敗しました','#cc3300');
+  });
+}
+
 // =====================
 // インターバルタイマー
 // =====================
@@ -1141,6 +1488,7 @@ function showScreen(name){
   if(name==='protein')renderProteinToday();
   if(name==='train'){renderCatTabs();renderExList();renderTrainExercises();}
   if(name==='sleep'){renderSleepHistory();renderSleepScore();}
+  if(name==='summary'){summaryWeekOffset=0;renderSummary();}
 }
 function toast(msg,color){
   const el=document.getElementById('toast');
@@ -1428,6 +1776,10 @@ function renderTrainExercises(){
   const exercises=getExercises();
   el.innerHTML=sessionExercises.map((ex,ei)=>{
     const vol=ex.sets.reduce((s,set)=>s+(set.weight*set.reps),0);const isDone=ex.done||false;
+    const est1RM=ex.sets.reduce((best,set)=>{
+      if(set.weight>0&&set.reps>0){const e1rm=Math.round(set.weight*(1+set.reps/30)*10)/10;return e1rm>best?e1rm:best;}
+      return best;
+    },0);
     const exMaster=exercises.find(e=>e.name===ex.name);
     const tips=exMaster?exMaster.tips:'';
     if(isDone){
@@ -1438,7 +1790,8 @@ function renderTrainExercises(){
     const tipsHtml=tips?`<div style="margin-bottom:8px"><button onclick="toggleTips('${esc(ex.name)}',event)" style="background:var(--surface2);border:1px solid #333;border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text2);cursor:pointer">${tipsOpen?'▲ 閉じる':'▼ フォームを見る'}</button><div style="display:${tipsOpen?'block':'none'};background:var(--surface2);border-radius:6px;padding:10px;margin-top:6px;font-size:13px;color:#f0f0f0;line-height:1.6">${tips.split(String.fromCharCode(10)).join('<br>')}</div></div>`:'';
     const isTimerRunning=timerExIdx===ei;
     const timerHtml=`<div class="timer-wrap"><div class="timer-display" id="timer-display-${ei}">${isTimerRunning?fmtTimer(timerSecs):'0s'}</div><button class="timer-btn${isTimerRunning?' running':''}" onclick="startTimer(${ei})">${isTimerRunning?'■ STOP':'▶ START'}</button></div>${isTimerRunning?`<div class="timer-msg" id="timer-msg-${ei}">${timerMsgCache}</div>`:''}`;
-    return `<div class="session-card"><div class="session-card-header"><div style="font-weight:700;font-size:16px">${ex.name}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--blue)">${fmtNum(vol)} kg</div></div>${tipsHtml}${setsHtml}${timerHtml}<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" onclick="addSet(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">＋ セット</button><button class="btn btn-green" onclick="toggleDone(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">完了 ✓</button></div></div>`;
+    const e1rmHtml=est1RM>0?`<div style="font-size:11px;color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-weight:700">推定1RM: ${est1RM}kg</div>`:'';
+    return `<div class="session-card"><div class="session-card-header"><div><div style="font-weight:700;font-size:16px">${ex.name}</div>${e1rmHtml}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--blue)">${fmtNum(vol)} kg</div></div>${tipsHtml}${setsHtml}${timerHtml}<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" onclick="addSet(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">＋ セット</button><button class="btn btn-green" onclick="toggleDone(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">完了 ✓</button></div></div>`;
   }).join('');
   const doneCount=sessionExercises.filter(e=>e.done).length;
   finishWrap.innerHTML=`<div class="finish-btn" onclick="finishWorkout()"><div class="f-title">🏁 トレーニング終了</div><div class="f-sub">${doneCount}/${sessionExercises.length} 種目完了 · ${fmtNum(calcTotalVol(sessionExercises))}kg</div></div>`;
