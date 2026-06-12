@@ -10,21 +10,21 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
---bg:#0a0600;--surface:#140900;--surface2:#1e0e00;--surface3:#2a1500;
+--bg:#080808;--surface:#111111;--surface2:#1a1a1a;--surface3:#242424;
 --accent:#ff4500;--accent2:#ff6a00;--gold:#ffb300;
---text:#fff5f0;--text2:#b07060;--text3:#5a3020;
+--text:#f5f5f5;--text2:#888888;--text3:#444444;
 --green:#34d399;--blue:#60a5fa;--yellow:#ffb300;
 --radius:16px;--radius-sm:10px;
 --neon-red:#ff4500;--neon-orange:#ff6a00;--neon-gold:#ffb300;
---glow-red:0 0 20px rgba(255,69,0,0.5);
---glow-orange:0 0 20px rgba(255,106,0,0.4);
---glow-gold:0 0 20px rgba(255,179,0,0.4);
---glass:rgba(30,14,0,0.75);
---glass-border:rgba(255,69,0,0.25);
+--glow-red:0 0 20px rgba(255,69,0,0.4);
+--glow-orange:0 0 16px rgba(255,106,0,0.35);
+--glow-gold:0 0 16px rgba(255,179,0,0.35);
+--glass:rgba(20,20,20,0.75);
+--glass-border:rgba(255,69,0,0.2);
 }
-html,body{background:var(--bg);background-image:radial-gradient(ellipse at 15% 15%,rgba(255,69,0,0.18) 0%,transparent 55%),radial-gradient(ellipse at 85% 85%,rgba(255,106,0,0.1) 0%,transparent 55%);color:var(--text);font-family:'Noto Sans JP',sans-serif;min-height:100vh;overflow-x:hidden}
+html,body{background:var(--bg);background-image:radial-gradient(ellipse at 50% 110%,rgba(255,69,0,0.18) 0%,rgba(255,100,0,0.08) 40%,transparent 70%);color:var(--text);font-family:'Noto Sans JP',sans-serif;min-height:100vh;overflow-x:hidden}
 .app{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
-.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(10,6,0,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(255,69,0,0.2);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(8,8,8,0.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(255,69,0,0.2);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;gap:4px;background:none;border:none;color:var(--text2);cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-size:10px;transition:color .2s}
 .nav-btn.active{color:var(--neon-orange);filter:drop-shadow(0 0 8px rgba(255,100,0,0.9))}
 .nav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -36,7 +36,7 @@ html,body{background:var(--bg);background-image:radial-gradient(ellipse at 15% 1
 .date-badge{background:var(--surface2);border:1px solid #333;border-radius:var(--radius-sm);padding:4px 10px;font-size:12px;color:var(--text2)}
 .card{background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
 .card-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.inp{background:rgba(30,14,0,0.6);border:1px solid rgba(255,69,0,0.2);border-radius:var(--radius-sm);padding:12px 14px;color:var(--text);font-size:16px;font-family:'Noto Sans JP',sans-serif;width:100%;outline:none;transition:border-color .2s}
+.inp{background:rgba(18,18,18,0.7);border:1px solid rgba(255,69,0,0.2);border-radius:var(--radius-sm);padding:12px 14px;color:var(--text);font-size:16px;font-family:'Noto Sans JP',sans-serif;width:100%;outline:none;transition:border-color .2s}
 .inp:focus{border-color:var(--neon-red);box-shadow:0 0 0 3px rgba(255,69,0,0.15)}
 .inp::placeholder{color:var(--text3)}
 .btn{border:none;border-radius:var(--radius-sm);padding:14px;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;text-transform:uppercase;transition:all .15s;margin-top:4px}
@@ -143,7 +143,7 @@ html,body{background:var(--bg);background-image:radial-gradient(ellipse at 15% 1
 .ex-add-btn:active{border-color:var(--accent);color:var(--accent)}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:none;align-items:flex-end;justify-content:center}
 .modal-overlay.open{display:flex}
-.modal-sheet{background:rgba(10,6,0,0.95);backdrop-filter:blur(20px);border:1px solid rgba(255,69,0,0.2);border-radius:20px 20px 0 0;padding:20px 16px 40px;width:100%;max-width:430px;max-height:85vh;overflow-y:auto}
+.modal-sheet{background:rgba(8,8,8,0.97);backdrop-filter:blur(20px);border:1px solid rgba(255,69,0,0.2);border-radius:20px 20px 0 0;padding:20px 16px 40px;width:100%;max-width:430px;max-height:85vh;overflow-y:auto}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .modal-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;text-transform:uppercase}
 .modal-close{background:var(--surface2);border:1px solid #333;border-radius:6px;width:32px;height:32px;cursor:pointer;color:var(--text2);font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
