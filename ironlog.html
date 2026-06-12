@@ -22,7 +22,7 @@
 --glass:rgba(20,20,20,0.75);
 --glass-border:rgba(255,69,0,0.2);
 }
-html,body{background:var(--bg);background-image:radial-gradient(ellipse at 50% 110%,rgba(255,69,0,0.18) 0%,rgba(255,100,0,0.08) 40%,transparent 70%);color:var(--text);font-family:'Noto Sans JP',sans-serif;min-height:100vh;overflow-x:hidden}
+html,body{background:var(--bg);background-image:radial-gradient(ellipse at 50% 110%,rgba(255,69,0,0.18) 0%,rgba(255,100,0,0.08) 40%,transparent 70%);transition:background-color .3s;color:var(--text);font-family:'Noto Sans JP',sans-serif;min-height:100vh;overflow-x:hidden}
 .app{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
 .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(8,8,8,0.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(255,69,0,0.2);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;gap:4px;background:none;border:none;color:var(--text2);cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-size:10px;transition:color .2s}
@@ -49,6 +49,24 @@ html,body{background:var(--bg);background-image:radial-gradient(ellipse at 50% 1
 .btn-danger{background:#1a0505;color:#ff4444;border:1px solid #441111}
 .btn-icon{background:var(--surface2);border:1px solid #333;border-radius:6px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ff4444;font-size:18px;flex-shrink:0}
 .btn-icon:active{transform:scale(0.9)}
+[data-theme="light"]{
+--bg:#f5f5f0;--surface:#ffffff;--surface2:#f0ede8;--surface3:#e8e4de;
+--accent:#ff4500;--accent2:#ff6a00;--gold:#e65c00;
+--text:#1a1a1a;--text2:#666666;--text3:#aaaaaa;
+--green:#059669;--blue:#2563eb;--yellow:#d97706;
+--glass:rgba(255,255,255,0.82);
+--glass-border:rgba(255,69,0,0.2);
+--glow-red:0 0 12px rgba(255,69,0,0.15);
+--glow-orange:0 0 10px rgba(255,106,0,0.12);
+--glow-gold:0 0 10px rgba(255,179,0,0.12);
+}
+[data-theme="light"] .stat-card.accent{background:rgba(255,69,0,0.05) !important;box-shadow:none !important}
+[data-theme="light"] .stat-card.green-card{background:rgba(5,150,105,0.05) !important;box-shadow:none !important}
+[data-theme="light"] .stat-card.blue-card{background:rgba(37,99,235,0.05) !important;box-shadow:none !important}
+[data-theme="light"] .stat-card.gold-card{background:rgba(217,119,6,0.05) !important;box-shadow:none !important}
+[data-theme="light"] .stat-card.unset{background:rgba(0,0,0,0.03) !important;box-shadow:none !important}
+[data-theme="light"] .stat-card::after{opacity:0.2}
+[data-theme="light"] .session-card.done{background:rgba(5,150,105,0.06) !important}
 .progress-wrap{background:var(--surface3);border-radius:100px;height:8px;overflow:hidden;margin:8px 0}
 .progress-bar{height:100%;border-radius:100px;transition:width .4s ease}
 .progress-bar.green{background:linear-gradient(90deg,#00c853,var(--green));box-shadow:0 0 10px rgba(52,211,153,0.4)}
@@ -312,6 +330,20 @@ html,body{background:var(--bg);background-image:radial-gradient(ellipse at 50% 1
         <div class="btn btn-secondary" style="text-align:center;cursor:pointer;margin-top:0">📥 データをインポート</div>
         <input type="file" accept=".json" onchange="importData(event)" style="display:none">
       </label>
+      <!-- テーマ切り替え -->
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin:20px 0 8px">テーマ</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">
+        <div id="theme-dark-btn" onclick="setTheme('dark')" style="border:2px solid var(--accent);border-radius:var(--radius-sm);padding:14px;text-align:center;cursor:pointer;background:#111;transition:all .2s">
+          <div style="font-size:22px;margin-bottom:4px">🌑</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#f5f5f5">DARK</div>
+          <div style="font-size:11px;color:#888;margin-top:2px">黒 × オレンジ</div>
+        </div>
+        <div id="theme-light-btn" onclick="setTheme('light')" style="border:2px solid #ddd;border-radius:var(--radius-sm);padding:14px;text-align:center;cursor:pointer;background:#f5f5f0;transition:all .2s">
+          <div style="font-size:22px;margin-bottom:4px">☀️</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#1a1a1a">LIGHT</div>
+          <div style="font-size:11px;color:#888;margin-top:2px">白 × オレンジ</div>
+        </div>
+      </div>
       <!-- バージョン情報 -->
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid #222;text-align:center">
         <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">アプリバージョン</div>
@@ -824,6 +856,7 @@ function addMuscleGroup(){
 // =====================
 function openSettingsModal(){
   if(!cfg)return;
+  updateThemeBtns(DB.get('theme')||'dark');
   
   const weights=DB.get('weights')||{};
   const keys=Object.keys(weights).sort();
@@ -1596,6 +1629,27 @@ async function fetchTimerMsg(ei,fallback){
   }
 }
 
+// =====================
+// テーマ切り替え
+// =====================
+function setTheme(t){
+  DB.set('theme',t);
+  applyTheme(t);
+  updateThemeBtns(t);
+  toast(t==='light'?'☀️ ライトモード':'🌑 ダークモード');
+}
+function applyTheme(t){
+  if(t==='light'){document.documentElement.setAttribute('data-theme','light');}
+  else{document.documentElement.removeAttribute('data-theme');}
+}
+function updateThemeBtns(t){
+  const d=document.getElementById('theme-dark-btn');
+  const l=document.getElementById('theme-light-btn');
+  if(d)d.style.borderColor=t==='dark'?'var(--accent)':'#333';
+  if(l)l.style.borderColor=t==='light'?'var(--accent)':'#ddd';
+}
+function initTheme(){applyTheme(DB.get('theme')||'dark');}
+
 function startApp(){
   const name=document.getElementById('ob-name').value.trim()||'トレーニー';
   const weight=parseFloat(document.getElementById('ob-weight').value)||70;
@@ -1607,7 +1661,7 @@ function startApp(){
 }
 function init(){
   if(!cfg){document.getElementById('onboard').style.display='flex';return;}
-  document.getElementById('onboard').style.display='none';_lastDate=today();  ['weight','protein','train','sleep'].forEach(k=>document.getElementById(k+'-date').textContent=fmtDateJP(today()));
+  document.getElementById('onboard').style.display='none';initTheme();_lastDate=today();  ['weight','protein','train','sleep'].forEach(k=>document.getElementById(k+'-date').textContent=fmtDateJP(today()));
   renderProteinPresets();renderCatTabs();renderExList();
   renderDashboard();renderWeightHistory();renderProteinToday();renderTrainExercises();renderSleepHistory();renderSleepScore();startAICommentLoop();
 
