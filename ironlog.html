@@ -1186,7 +1186,7 @@ function renderSummary(){
     html+='<div class="summary-row"><span>記録日数</span><span class="summary-val">'+weekSleep.length+'/7日</span></div>';
   }else{html+='<div style="color:var(--text3);font-size:13px">記録なし</div>';}
   html+='</div>';
-  html+='<div class="copy-btn" onclick="copySummaryForAI()"><div class="copy-btn-title">分析用コピー</div></div>';
+  html+='<div class="copy-btn" onclick="copySummaryForAI()"><div class="copy-btn-title">分析コピー</div></div>';
   document.getElementById('summary-content').innerHTML=html;
 }
 function copySummaryForAI(){
