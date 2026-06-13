@@ -1641,6 +1641,48 @@ function updateThemeBtns(t){
 }
 function initTheme(){applyTheme(DB.get('theme')||'dark');}
 
+// =====================
+// 自動バックアップ
+// =====================
+const BACKUP_URL='https://script.google.com/macros/s/AKfycbxm_V1uXqZasNzB0qr9eINeuvjb6OtVXlBduUfEw5v8V1NJfCdkiClpg3gYJmHzaVcm/exec';
+
+async function autoBackup(){
+  // 今日すでにバックアップ済みなら何もしない
+  const lastBackup=DB.get('last_backup');
+  if(lastBackup===today())return;
+  try{
+    const data={
+      version:1,
+      date:today(),
+      exportDate:new Date().toISOString(),
+      cfg:DB.get('cfg'),
+      weights:DB.get('weights'),
+      exercises:DB.get('exercises'),
+      muscle_groups:DB.get('muscle_groups'),
+      sleep_history:DB.get('sleep_history'),
+      day_types:DB.get('day_types'),
+      protein_logs:{},
+      train_logs:{},
+    };
+    Object.keys(localStorage).filter(k=>k.startsWith('ironlog_protein_')).forEach(k=>{
+      try{data.protein_logs[k.replace('ironlog_protein_','')]=JSON.parse(localStorage.getItem(k));}catch(e){}
+    });
+    Object.keys(localStorage).filter(k=>k.startsWith('ironlog_train_')).forEach(k=>{
+      try{data.train_logs[k.replace('ironlog_train_','')]=JSON.parse(localStorage.getItem(k));}catch(e){}
+    });
+    const res=await fetch(BACKUP_URL,{
+      method:'POST',
+      body:JSON.stringify(data),
+    });
+    if(res.ok){
+      DB.set('last_backup',today());
+      console.log('✓ バックアップ完了');
+    }
+  }catch(e){
+    console.log('バックアップ失敗:', e.message);
+  }
+}
+
 function startApp(){
   const name=document.getElementById('ob-name').value.trim()||'トレーニー';
   const weight=parseFloat(document.getElementById('ob-weight').value)||70;
@@ -1654,7 +1696,7 @@ function init(){
   if(!cfg){document.getElementById('onboard').style.display='flex';return;}
   document.getElementById('onboard').style.display='none';initTheme();_lastDate=today();  ['weight','protein','train','sleep'].forEach(k=>document.getElementById(k+'-date').textContent=fmtDateJP(today()));
   renderProteinPresets();renderCatTabs();renderExList();
-  renderDashboard();renderWeightHistory();renderProteinToday();renderTrainExercises();renderSleepHistory();renderSleepScore();startAICommentLoop();
+  renderDashboard();renderWeightHistory();renderProteinToday();renderTrainExercises();renderSleepHistory();renderSleepScore();startAICommentLoop();setTimeout(autoBackup,3000);
 
 }
 function showScreen(name){
