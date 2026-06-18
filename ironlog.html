@@ -445,6 +445,9 @@ html,body{background:var(--bg);background-image:radial-gradient(ellipse at 50% 1
     </div>
     <div class="section-title">直近の記録</div>
     <div id="d-recent-list"></div>
+    <div onclick="copyDailyLog()" style="margin-top:16px;padding:14px;background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:var(--radius);text-align:center;cursor:pointer;transition:all .15s" ontouchstart="this.style.opacity='.7'" ontouchend="this.style.opacity='1'">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:var(--text)">DAILY LOG</div>
+    </div>
   </div>  <!-- WEIGHT -->
   <div class="screen" id="screen-weight">
     <div class="screen-header">
@@ -1640,6 +1643,66 @@ function updateThemeBtns(t){
   if(l)l.style.borderColor=t==='light'?'var(--accent)':'#ddd';
 }
 function initTheme(){applyTheme(DB.get('theme')||'dark');}
+
+// =====================
+// DAILY LOG コピー
+// =====================
+function copyDailyLog(){
+  const NL=String.fromCharCode(10);
+  const weights=DB.get('weights')||{};
+  const w=weights[today()]||null;
+  const protLog=DB.get('protein_'+today())||[];
+  const protTotal=Math.round(protLog.reduce((s,e)=>s+e.g,0));
+  const protGoal=getProteinGoal();
+  const trainLog=DB.get('train_'+today())||[];
+  const vol=Math.round(calcTotalVol(trainLog));
+  const sleepHistory=DB.get('sleep_history')||[];
+  const sleepRec=sleepHistory.find(r=>r.date===today())||null;
+  const dayTypes=getDayTypes();
+  const todayTypes=dayTypes[today()]||[];
+  const groups=getMuscleGroups();
+  const typeNames=todayTypes.filter(id=>id!=='rest').map(id=>{const g=groups.find(x=>x.id===id);return g?g.name:'';}).filter(Boolean).join('・');
+  const isRest=todayTypes.includes('rest');
+
+  const trainDetail=trainLog.map(function(ex){
+    const exVol=Math.round(ex.sets.reduce(function(s,set){return s+(set.weight*set.reps);},0));
+    const bestSet=ex.sets.reduce(function(b,s){return s.weight>b.weight?s:b;},{weight:0,reps:0});
+    const e1rm=bestSet.weight>0&&bestSet.reps>0?Math.round(bestSet.weight*(1+bestSet.reps/30)*10)/10:0;
+    const setDetail=ex.sets.map(function(s,i){return '    セット'+(i+1)+': '+s.weight+'kg×'+s.reps+'回';}).join(NL);
+    return '  '+ex.name+NL+setDetail+NL+'  → ボリューム'+exVol+'kg / 推定1RM '+e1rm+'kg';
+  }).join(NL);
+
+  const lines=[
+    '以下は筋トレ記録アプリ「IRON LOG」の今日のデータです。分析とアドバイスをお願いします。',
+    '',
+    '【日付】'+today(),
+    '',
+    '【体重】'+(w?w+'kg':'未記録'),
+    '',
+    '【タンパク質】',
+    '・摂取量: '+protTotal+'g / 目標: '+protGoal+'g',
+    '・達成率: '+Math.round(protTotal/protGoal*100)+'%',
+    protLog.length?'・内訳: '+protLog.map(function(e){return e.food+' '+e.g+'g';}).join(', '):'',
+    '',
+    '【トレーニング】',
+    isRest?'・休筋日':trainLog.length?('・部位: '+(typeNames||'未設定')+NL+'・総ボリューム: '+vol+'kg'+NL+trainDetail):'・未記録',
+    '',
+    '【睡眠・回復】',
+    sleepRec?('・睡眠: '+sleepRec.hours+'h / 質: '+['','最悪','浅め','まあまあ','爆睡'][sleepRec.quality]+' / 疲労度: '+sleepRec.fatigue+'/10'+(sleepRec.note?' / メモ: '+sleepRec.note:'')):'・未記録',
+    '',
+    '【分析依頼】',
+    '今日のデータをもとに以下を教えてください：',
+    '1. 今日の総評',
+    '2. 良かった点・改善できる点',
+    '3. 明日へのアドバイス',
+  ].filter(function(l){return l!==''||true;});
+
+  navigator.clipboard.writeText(lines.join(NL)).then(function(){
+    toast('✓ DAILY LOGをコピーしました！');
+  }).catch(function(){
+    toast('⚠ コピーに失敗しました','#cc3300');
+  });
+}
 
 // =====================
 // 自動バックアップ
