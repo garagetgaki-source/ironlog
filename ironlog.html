@@ -1618,14 +1618,16 @@ function stopSessionMotivation(){
 
 function fmtTimer(s){const m=Math.floor(s/60);const ss=s%60;return m>0?`${m}:${String(ss).padStart(2,'0')}`:`${ss}s`;}
 function startTimer(ei){
-  if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;}if(timerMsgInterval){clearInterval(timerMsgInterval);timerMsgInterval=null;}
+  if(timerMsgInterval){clearInterval(timerMsgInterval);timerMsgInterval=null;}
   if(timerExIdx===ei){timerExIdx=null;timerSecs=0;timerMsgCache='';renderTrainExercises();return;}
   timerExIdx=ei;timerSecs=0;timerMsgCache='';
-  const fixed=TIMER_MSGS[Math.floor(Math.random()*TIMER_MSGS.length)];
-  timerMsgCache='<span style="opacity:0.6">AI生成中...</span>';
+  // 最初のメッセージを表示
+  fetchTimerMsg(ei,'');
   renderTrainExercises();
   timerInterval=setInterval(()=>{timerSecs++;updateTimerDisplay();},1000);
-  fetchTimerMsg(ei,fixed);
+  // 20秒ごとにメッセージ更新
+  timerMsgInterval=setInterval(()=>{fetchTimerMsg(timerExIdx,'');},20000);
 }
 function updateTimerDisplay(){
   const el=document.getElementById('timer-display-'+timerExIdx);
@@ -1661,6 +1663,26 @@ function updateThemeBtns(t){
   if(l)l.style.borderColor=t==='light'?'var(--accent)':'#ddd';
 }
 function initTheme(){applyTheme(DB.get('theme')||'dark');}
+
+// =====================
+// 種目コピー
+// =====================
+function copyExerciseLog(exIdx){
+  loadTodayTraining();
+  const ex=sessionExercises[exIdx];
+  if(!ex)return;
+  const NL=String.fromCharCode(10);
+  const bestSet=ex.sets.reduce(function(b,s){return s.weight>b.weight?s:b;},{weight:0,reps:0});
+  const e1rm=bestSet.weight>0&&bestSet.reps>0?Math.round(bestSet.weight*(1+bestSet.reps/30)*10)/10:0;
+  const setLines=ex.sets.filter(function(s){return s.weight>0||s.reps>0;}).map(function(s){return s.weight+'kg × '+s.reps+'回';});
+  const lines=[ex.name].concat(setLines);
+  if(e1rm>0)lines.push('推定1RM: '+e1rm+'kg');
+  navigator.clipboard.writeText(lines.join(NL)).then(function(){
+    toast('✓ '+ex.name+' をコピーしました');
+  }).catch(function(){
+    toast('⚠ コピーに失敗しました','#cc3300');
+  });
+}
 
 // =====================
 // PR演出
@@ -2026,7 +2048,7 @@ function openExModal(name){
   const pr=getPR(name);const hist=getExHistory(name).slice(0,20);
   document.getElementById('modal-ex-name').textContent=name;
   const prHtml=pr?`<div style="background:#1a1600;border:1px solid #ffd600;border-radius:8px;padding:12px;margin-bottom:12px"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">🏆 PERSONAL RECORD</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:700;color:var(--gold)">${pr.weight}kg × ${pr.reps}回</div><div style="font-size:12px;color:var(--text2);margin-top:2px">${fmtDateJP(pr.date)}</div></div>`:`<div style="color:var(--text2);font-size:13px;margin-bottom:12px">まだ記録がありません</div>`;
-  const tipsHtml=ex.tips?`<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📌 フォームのポイント</div><div style="font-size:14px;line-height:1.7">${ex.tips.split('\n').join('<br>')}</div></div>`:'';
+  const tipsHtml=ex.tips?`<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📌 フォームのポイント</div><div style="font-size:14px;line-height:1.7">${ex.tips.replace(/\*\*(.+?)\*\*/g,'<strong style="color:var(--text)">$1</strong>').split('\n').join('<br>')}</div></div>`:'';
   const ytHtml=ex.yt?`<a href="${ex.yt}" target="_blank" style="display:block;background:var(--surface2);border:1px solid #333;border-radius:8px;padding:12px;text-align:center;color:var(--blue);font-size:14px;font-weight:700;text-decoration:none;margin-bottom:12px">▶ YouTube で動画を見る</a>`:'';
   let histHtml='';
   if(hist.length){const prKey=pr?`${pr.date}-${pr.weight}-${pr.reps}`:null;histHtml=`<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 記録履歴</div>`+hist.map(h=>{const isPR=prKey&&`${h.date}-${h.weight}-${h.reps}`===prKey;return `<div class="hist-row"><span style="color:var(--text2)">${fmtDateJP(h.date)} SET${h.set}</span><span class="${isPR?'hist-pr':''}">${h.weight}kg × ${h.reps}回${isPR?' 🏆':''}</span></div>`;}).join('')+`</div>`;}
@@ -2100,6 +2122,7 @@ function addPreset(){
 let sessionExercises=[];
 let timerExIdx=null;
 let timerInterval=null;
+let timerMsgInterval=null;
 let timerSecs=0;
 let timerMsgCache='';
 let motivMsgs=[];
@@ -2146,7 +2169,8 @@ function renderTrainExercises(){
     const isTimerRunning=timerExIdx===ei;
     const timerHtml=`<div class="timer-wrap"><div class="timer-display" id="timer-display-${ei}">${isTimerRunning?fmtTimer(timerSecs):'0s'}</div><button class="timer-btn${isTimerRunning?' running':''}" onclick="startTimer(${ei})">${isTimerRunning?'■ STOP':'▶ START'}</button></div>${isTimerRunning?`<div class="timer-msg" id="timer-msg-${ei}">${timerMsgCache}</div>`:''}`;
     const e1rmHtml=est1RM>0?`<div style="font-size:11px;color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-weight:700">推定1RM: ${est1RM}kg</div>`:'';
-    return `<div class="session-card"><div class="session-card-header"><div><div style="font-weight:700;font-size:16px">${ex.name}</div>${e1rmHtml}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--blue)">${fmtNum(vol)} kg</div></div>${tipsHtml}${setsHtml}${timerHtml}<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" onclick="addSet(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">＋ セット</button><button class="btn btn-green" onclick="toggleDone(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">完了 ✓</button></div></div>`;
+    const copyBtnHtml=`<div onclick="copyExerciseLog(${idx})" style="margin-top:8px;padding:8px;background:transparent;border:1px solid var(--glass-border);border-radius:var(--radius-sm);text-align:center;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--text2);text-transform:uppercase">COPY</div>`;
+    return `<div class="session-card"><div class="session-card-header"><div><div style="font-weight:700;font-size:16px">${ex.name}</div>${e1rmHtml}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--blue)">${fmtNum(vol)} kg</div></div>${tipsHtml}${setsHtml}${timerHtml}${copyBtnHtml}<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" onclick="addSet(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">＋ セット</button><button class="btn btn-green" onclick="toggleDone(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">完了 ✓</button></div></div>`;
   }).join('');
   const doneCount=sessionExercises.filter(e=>e.done).length;
   finishWrap.innerHTML=`<div class="finish-btn" onclick="finishWorkout()"><div class="f-title">🏁 トレーニング終了</div><div class="f-sub">${doneCount}/${sessionExercises.length} 種目完了 · ${fmtNum(calcTotalVol(sessionExercises))}kg</div></div>`;
