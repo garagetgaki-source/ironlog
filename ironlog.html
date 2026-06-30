@@ -295,6 +295,34 @@ html,body{background:var(--bg);background-image:radial-gradient(ellipse at 50% 1
     <div class="pr-modal-val" id="pr-modal-val"></div>
     <div class="pr-modal-sub" id="pr-modal-sub"></div>
     <button class="pr-close-btn" onclick="closePRModal()">LETS GO 💪</button>
+  </div>
+  <div class="modal-overlay" id="water-modal">
+    <div class="modal-sheet">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="screen-title" style="font-size:22px">水分記録<span>.</span></div>
+        <div onclick="closeWaterModal()" style="font-size:24px;color:var(--text2);cursor:pointer;padding:4px 10px">×</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+        <div class="water-preset-btn" onclick="addWater(200)">
+          <div class="water-preset-icon">🥤</div>
+          <div class="water-preset-label">200ml</div>
+        </div>
+        <div class="water-preset-btn" onclick="addWater(350)">
+          <div class="water-preset-icon">🥫</div>
+          <div class="water-preset-label">350ml</div>
+        </div>
+        <div class="water-preset-btn" onclick="addWater(500)">
+          <div class="water-preset-icon">🍶</div>
+          <div class="water-preset-label">500ml</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input class="inp" type="number" id="water-custom-input" placeholder="カスタム(ml)" style="flex:1">
+        <button class="btn btn-primary" onclick="addWaterCustom()" style="width:auto;padding:12px 20px;margin-top:0">追加</button>
+      </div>
+      <div class="section-title" style="margin-top:8px">今日の記録</div>
+      <div id="water-log-list"></div>
+    </div>
   </div>  <!-- 今日どうする？モーダル -->
   <div class="modal-overlay" id="today-modal">
     <div class="modal-sheet">
@@ -429,6 +457,18 @@ html,body{background:var(--bg);background-image:radial-gradient(ellipse at 50% 1
       <div class="stat-card gold-card" id="d-card-sleep" onclick="showScreen('sleep')">
         <div class="val" id="d-sleep-val">--<span class="unit">点</span></div>
         <div class="lbl">回復スコア / 10</div>
+      </div>
+    </div>
+    <div class="dash-grid">
+      <div class="stat-card accent" id="d-card-water" onclick="openWaterModal()" style="grid-column:span 2">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="val" id="d-water-val">--<span class="unit">ml</span></div>
+            <div class="lbl">💧 水分摂取</div>
+            <div class="sub" id="d-water-goal">目標: --ml</div>
+          </div>
+          <div style="font-size:32px">💧</div>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -1685,6 +1725,80 @@ function copyExerciseLog(exIdx){
 }
 
 // =====================
+// 水分管理
+// =====================
+function getWaterGoal(){
+  const weights=DB.get('weights')||{};
+  const keys=Object.keys(weights).sort();
+  const latestW=keys.length?weights[keys[keys.length-1]]:70;
+  const dayTypes=getDayTypes();
+  const todayTypes=dayTypes[today()]||[];
+  const isTrainDay=todayTypes.length>0&&!todayTypes.includes('rest');
+  const base=Math.round(latestW*35);
+  return isTrainDay?base+500:base;
+}
+function getWaterLog(){return DB.get('water_'+today())||[];}
+function getWaterTotal(){return getWaterLog().reduce((s,e)=>s+e.ml,0);}
+function openWaterModal(){
+  renderWaterLog();
+  document.getElementById('water-modal').classList.add('open');
+}
+function closeWaterModal(){
+  document.getElementById('water-modal').classList.remove('open');
+}
+function addWater(ml){
+  const log=getWaterLog();
+  log.push({ml:ml,time:new Date().toTimeString().slice(0,5)});
+  DB.set('water_'+today(),log);
+  renderWaterLog();
+  renderDashboard();
+  toast('💧 '+ml+'ml 追加しました');
+}
+function addWaterCustom(){
+  const input=document.getElementById('water-custom-input');
+  const ml=parseInt(input.value);
+  if(!ml||ml<=0){toast('⚠ mlを入力してください','#cc3300');return;}
+  addWater(ml);
+  input.value='';
+}
+function deleteWater(idx){
+  const log=getWaterLog();
+  log.splice(idx,1);
+  DB.set('water_'+today(),log);
+  renderWaterLog();
+  renderDashboard();
+}
+function renderWaterLog(){
+  const log=getWaterLog();
+  const el=document.getElementById('water-log-list');
+  if(!el)return;
+  if(!log.length){el.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:12px">まだ記録がありません</div>';return;}
+  el.innerHTML=log.map(function(e,i){
+    return '<div class="water-log-item"><span>💧 '+e.ml+'ml <span style="color:var(--text3)">'+e.time+'</span></span><span onclick="deleteWater('+i+')" style="color:var(--accent);cursor:pointer;padding:4px 8px">削除</span></div>';
+  }).join('');
+}
+function renderWaterDash(){
+  const total=getWaterTotal();
+  const goal=getWaterGoal();
+  const valEl=document.getElementById('d-water-val');
+  const goalEl=document.getElementById('d-water-goal');
+  const cardEl=document.getElementById('d-card-water');
+  if(valEl)valEl.innerHTML=total+'<span class="unit">ml</span>';
+  if(goalEl)goalEl.textContent='目標: '+goal+'ml';
+  if(cardEl){
+    if(total>=goal)cardEl.classList.remove('unset');
+    else if(total===0)cardEl.classList.add('unset');
+    else cardEl.classList.remove('unset');
+  }
+}
+function calcWaterScore(){
+  const total=getWaterTotal();
+  const goal=getWaterGoal();
+  if(goal<=0)return 0;
+  return Math.min(1,total/goal);
+}
+
+// =====================
 // PR演出
 // =====================
 const CONFETTI_COLORS=['#ff4500','#ff6a00','#ffb300','#ffffff','#ff4500','#ffb300'];
@@ -1972,7 +2086,7 @@ function renderDashboard(){
   // 睡眠カード
   const sleepHistory=DB.get('sleep_history')||[];const todaySleep=sleepHistory.find(r=>r.date===today());
   const sCard=document.getElementById('d-card-sleep');
-  if(todaySleep){sCard.className='stat-card gold-card';const score=Math.round(calcSleepScore(todaySleep.hours,todaySleep.quality,todaySleep.fatigue)*10)/10;document.getElementById('d-sleep-val').innerHTML=`${score}<span class="unit">点</span>`;}
+  if(todaySleep){sCard.className='stat-card gold-card';const waterRatio=calcWaterScore();const score=calcRecoveryScore(todaySleep.hours,todaySleep.quality,todaySleep.fatigue,waterRatio);document.getElementById('d-sleep-val').innerHTML=`${score}<span class="unit">点</span>`;}
   else{sCard.className='stat-card unset';document.getElementById('d-sleep-val').innerHTML='昨夜どうだった？';}
   document.getElementById('dash-greeting').textContent=cfg.name+' さん、今日もやり切ろう！';
   // ストリーク
@@ -1991,7 +2105,7 @@ function renderDashboard(){
   const recentEl=document.getElementById('d-recent-list');
   if(!recentItems.length){recentEl.innerHTML='<div class="empty-state"><div class="icon">📊</div>まだ記録がありません</div>';}
   else{recentEl.innerHTML=recentItems.slice(0,5).map(item=>`<div class="log-item"><div><div class="name" style="font-size:13px">${fmtDateJP(item.date)}</div><div class="detail">${item.text}</div></div><div style="text-align:right"><div class="vol">${fmtNum(item.vol)}</div><div class="vol-unit">kg</div></div></div>`).join('');}
-  renderWeightGraph();renderCalendar();
+  renderWeightGraph();renderCalendar();renderWaterDash();
 }// =====================
 // CATEGORY TABS
 // =====================
@@ -2178,7 +2292,15 @@ function renderTrainExercises(){
 }
 // // SLEEP
 // =====================
-function calcSleepScore(hours,quality,fatigue){let hScore=4;if(hours<7)hScore=Math.max(0,4-(7-hours)*1.5);else if(hours>9)hScore=Math.max(0,4-(hours-9)*1.5);const qScore=quality-1;const fScore=Math.max(0,3-((fatigue-1)/9)*3);return Math.round((hScore+qScore+fScore)*10)/10;}
+function calcSleepScore(hours,quality,fatigue){let hScore=4;if(hours<7)hScore=Math.max(0,4-(7-hours)*1.5);else if(hours>9)hScore=Math.max(0,4-(hours-9)*1.5);const qScore=quality-1;const fScore=Math.max(0,3-((fatigue-1)/9)*3);const baseScore=hScore+qScore+fScore;
+  // 水分要素を統合（その日が今日の場合のみ反映、過去日は睡眠のみで計算）
+  return Math.round(baseScore*10)/10;
+}
+function calcRecoveryScore(hours,quality,fatigue,waterRatio){
+  const sleepScore=calcSleepScore(hours,quality,fatigue);
+  const wScore=Math.min(1,waterRatio||0)*1; // 水分は最大+1点のボーナス的役割
+  return Math.min(10,Math.round((sleepScore*0.9+wScore)*10)/10);
+}
 function renderSleepScore(){const sleepHistory=DB.get('sleep_history')||[];const todaySleep=sleepHistory.find(r=>r.date===today());const card=document.getElementById('sleep-score-card');if(!todaySleep){card.style.display='none';return;}card.style.display='block';const score=Math.round(calcSleepScore(todaySleep.hours,todaySleep.quality,todaySleep.fatigue)*10)/10;document.getElementById('score-display').textContent=score;let color,comment,barClass;if(score>=8){color='var(--green)';comment='最高の回復状態 🔥';barClass='green';}else if(score>=6){color='var(--yellow)';comment='まずまずの回復 👍';barClass='yellow';}else if(score>=4){color='var(--accent2)';comment='回復不足気味 😐';barClass='red';}else{color='var(--accent)';comment='オーバートレーニング注意！ 💀';barClass='red';}document.getElementById('score-display').style.color=color;document.getElementById('score-comment').textContent=comment;document.getElementById('score-comment').style.color=color;document.getElementById('score-detail').textContent=`睡眠${todaySleep.hours.toFixed(1)}h / 質${todaySleep.quality}/4 / 疲労${todaySleep.fatigue}/10`;document.getElementById('score-bar').className='progress-bar '+barClass;document.getElementById('score-bar').style.width=(score/10*100)+'%';}
 let selectedQuality=4;
 function updateSleepDisplay(){const h=parseFloat(document.getElementById('sleep-hours').value);document.getElementById('sleep-hours-display').textContent=h.toFixed(1)+'h';document.getElementById('sleep-bar').style.width=((h-3)/(12-3)*100)+'%';}
