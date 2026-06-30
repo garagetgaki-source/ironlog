@@ -302,19 +302,15 @@ html,body{background:var(--bg);background-image:radial-gradient(ellipse at 50% 1
         <div class="screen-title" style="font-size:22px">水分記録<span>.</span></div>
         <div onclick="closeWaterModal()" style="font-size:24px;color:var(--text2);cursor:pointer;padding:4px 10px">×</div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
-        <div class="water-preset-btn" onclick="addWater(200)">
-          <div class="water-preset-icon">🥤</div>
-          <div class="water-preset-label">200ml</div>
+      <div id="water-preset-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px"></div>
+      <div onclick="toggleWaterPresetEdit()" style="text-align:right;font-size:12px;color:var(--text2);cursor:pointer;margin-bottom:16px">✎ プリセットを編集</div>
+      <div id="water-preset-edit" style="display:none;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <input class="inp" type="number" id="water-preset-input-0" style="text-align:center;height:44px;padding:8px">
+          <input class="inp" type="number" id="water-preset-input-1" style="text-align:center;height:44px;padding:8px">
+          <input class="inp" type="number" id="water-preset-input-2" style="text-align:center;height:44px;padding:8px">
         </div>
-        <div class="water-preset-btn" onclick="addWater(350)">
-          <div class="water-preset-icon">🥫</div>
-          <div class="water-preset-label">350ml</div>
-        </div>
-        <div class="water-preset-btn" onclick="addWater(500)">
-          <div class="water-preset-icon">🍶</div>
-          <div class="water-preset-label">500ml</div>
-        </div>
+        <button class="btn btn-primary" onclick="saveWaterPresets()" style="margin-top:8px;padding:10px;font-size:15px">保存</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:16px">
         <input class="inp" type="number" id="water-custom-input" placeholder="カスタム(ml)" style="flex:1">
@@ -1739,7 +1735,45 @@ function getWaterGoal(){
 }
 function getWaterLog(){return DB.get('water_'+today())||[];}
 function getWaterTotal(){return getWaterLog().reduce((s,e)=>s+e.ml,0);}
+const WATER_PRESET_ICONS=['🥤','🥫','🍶'];
+function getWaterPresets(){
+  return DB.get('water_presets')||[200,350,500];
+}
+function renderWaterPresets(){
+  const presets=getWaterPresets();
+  const el=document.getElementById('water-preset-row');
+  if(!el)return;
+  el.innerHTML=presets.map(function(ml,i){
+    return '<div class="water-preset-btn" onclick="addWater('+ml+')"><div class="water-preset-icon">'+WATER_PRESET_ICONS[i]+'</div><div class="water-preset-label">'+ml+'ml</div></div>';
+  }).join('');
+}
+function toggleWaterPresetEdit(){
+  const el=document.getElementById('water-preset-edit');
+  if(!el)return;
+  const isOpen=el.style.display!=='none';
+  if(!isOpen){
+    const presets=getWaterPresets();
+    presets.forEach(function(ml,i){
+      const input=document.getElementById('water-preset-input-'+i);
+      if(input)input.value=ml;
+    });
+  }
+  el.style.display=isOpen?'none':'block';
+}
+function saveWaterPresets(){
+  const newPresets=[];
+  for(let i=0;i<3;i++){
+    const val=parseInt(document.getElementById('water-preset-input-'+i).value);
+    if(!val||val<=0){toast('⚠ 全て正しい数値を入力してください','#cc3300');return;}
+    newPresets.push(val);
+  }
+  DB.set('water_presets',newPresets);
+  renderWaterPresets();
+  document.getElementById('water-preset-edit').style.display='none';
+  toast('✓ プリセットを保存しました');
+}
 function openWaterModal(){
+  renderWaterPresets();
   renderWaterLog();
   document.getElementById('water-modal').classList.add('open');
 }
