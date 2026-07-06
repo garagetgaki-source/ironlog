@@ -1976,6 +1976,46 @@ async function autoBackup(){
   }
 }
 
+// =====================
+// 戻るボタン制御
+// =====================
+function initBackButton(){
+  // 最初にhistoryを1つ追加してアプリ内に留まれるようにする
+  history.pushState({page:'app'},'',location.href);
+
+  window.addEventListener('popstate',function(e){
+    // まずモーダルが開いているか確認
+    const openModals=['today-modal','settings-modal','ex-modal','add-ex-modal','water-modal'];
+    let closedModal=false;
+    openModals.forEach(function(id){
+      const el=document.getElementById(id);
+      if(el&&el.classList.contains('open')){
+        el.classList.remove('open');
+        closedModal=true;
+      }
+    });
+
+    if(closedModal){
+      // モーダルを閉じた場合、historyを再プッシュして次の戻るに備える
+      history.pushState({page:'app'},'',location.href);
+      return;
+    }
+
+    // 現在のアクティブ画面を確認
+    const activeScreen=document.querySelector('.screen.active');
+    const screenId=activeScreen?activeScreen.id:'screen-dash';
+
+    if(screenId!=='screen-dash'){
+      // ダッシュ以外→ダッシュに戻る
+      showScreen('dash');
+      history.pushState({page:'app'},'',location.href);
+    } else {
+      // ダッシュ画面→historyを再プッシュして閉じさせない
+      history.pushState({page:'app'},'',location.href);
+    }
+  });
+}
+
 function startApp(){
   const name=document.getElementById('ob-name').value.trim()||'トレーニー';
   const weight=parseFloat(document.getElementById('ob-weight').value)||70;
@@ -1989,7 +2029,7 @@ function init(){
   if(!cfg){document.getElementById('onboard').style.display='flex';return;}
   document.getElementById('onboard').style.display='none';initTheme();_lastDate=today();  ['weight','protein','train','sleep'].forEach(k=>document.getElementById(k+'-date').textContent=fmtDateJP(today()));
   renderProteinPresets();renderCatTabs();renderExList();
-  renderDashboard();renderWeightHistory();renderProteinToday();renderTrainExercises();renderSleepHistory();renderSleepScore();startAICommentLoop();setTimeout(autoBackup,3000);
+  renderDashboard();renderWeightHistory();renderProteinToday();renderTrainExercises();renderSleepHistory();renderSleepScore();startAICommentLoop();setTimeout(autoBackup,3000);initBackButton();
 
 }
 function showScreen(name){
