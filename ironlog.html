@@ -2192,6 +2192,23 @@ function renderCatTabs(){
 function selectCat(cat){currentCat=cat;renderExList();}// =====================
 // PR / HISTORY
 // =====================
+function getPastPR(exName){
+  // 今日以外の過去ベスト
+  let pr=null;
+  Object.keys(localStorage).filter(k=>k.startsWith('ironlog_train_')).forEach(k=>{
+    const date=k.replace('ironlog_train_','');
+    if(date===today())return; // 今日は除外
+    try{
+      JSON.parse(localStorage.getItem(k)||'[]').forEach(function(ex){
+        if(ex.name===exName)ex.sets.forEach(function(set){
+          if(set.weight>0&&set.reps>0&&(!pr||set.weight>pr.weight||(set.weight===pr.weight&&set.reps>pr.reps)))
+            pr={weight:set.weight,reps:set.reps,date:date};
+        });
+      });
+    }catch(e){}
+  });
+  return pr;
+}
 function getPR(exName){let pr=null;Object.keys(localStorage).filter(k=>k.startsWith('ironlog_train_')).forEach(k=>{try{const date=k.replace('ironlog_train_','');JSON.parse(localStorage.getItem(k)||'[]').forEach(ex=>{if(ex.name===exName)ex.sets.forEach(set=>{if(set.weight>0&&set.reps>0&&(!pr||set.weight>pr.weight||(set.weight===pr.weight&&set.reps>pr.reps)))pr={weight:set.weight,reps:set.reps,date};});});}catch(e){}});return pr;}
 function getExHistory(exName){const hist=[];Object.keys(localStorage).filter(k=>k.startsWith('ironlog_train_')).sort((a,b)=>b.localeCompare(a)).slice(0,30).forEach(k=>{try{const date=k.replace('ironlog_train_','');JSON.parse(localStorage.getItem(k)||'[]').forEach(ex=>{if(ex.name===exName)ex.sets.forEach((set,si)=>{if(set.weight>0&&set.reps>0)hist.push({date,set:si+1,weight:set.weight,reps:set.reps});});});}catch(e){}});return hist;}// =====================
 // EXERCISE LIST
@@ -2357,8 +2374,11 @@ function renderTrainExercises(){
     const isTimerRunning=timerExIdx===ei;
     const timerHtml=`<div class="timer-wrap"><div class="timer-display" id="timer-display-${ei}">${isTimerRunning?fmtTimer(timerSecs):'0s'}</div><button class="timer-btn${isTimerRunning?' running':''}" onclick="startTimer(${ei})">${isTimerRunning?'■ STOP':'▶ START'}</button></div>${isTimerRunning?`<div class="timer-msg" id="timer-msg-${ei}">${timerMsgCache}</div>`:''}`;
     const e1rmHtml=est1RM>0?`<div style="font-size:11px;color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-weight:700">推定1RM: ${est1RM}kg</div>`:'';
+    // 過去ベスト（今日以外）
+    const pastPR=getPastPR(ex.name);
+    const pastPRHtml=pastPR?`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,179,0,0.08);border:1px solid rgba(255,179,0,0.2);border-radius:var(--radius-sm);margin-bottom:10px"><div style="font-size:16px">🏆</div><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--gold)">BEST: ${pastPR.weight}kg × ${pastPR.reps}回</div><div style="font-size:11px;color:var(--text2)">推定1RM: ${Math.round(pastPR.weight*(1+pastPR.reps/30)*10)/10}kg・${fmtDateJP(pastPR.date)}</div></div></div>`:'';
     const copyBtnHtml=`<div onclick="copyExerciseLog(${ei})" style="margin-top:8px;padding:8px;background:transparent;border:1px solid var(--glass-border);border-radius:var(--radius-sm);text-align:center;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--text2);text-transform:uppercase">COPY</div>`;
-    return `<div class="session-card"><div class="session-card-header"><div><div style="font-weight:700;font-size:16px">${ex.name}</div>${e1rmHtml}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--blue)">${fmtNum(vol)} kg</div></div>${tipsHtml}${setsHtml}${timerHtml}${copyBtnHtml}<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" onclick="addSet(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">＋ セット</button><button class="btn btn-green" onclick="toggleDone(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">完了 ✓</button></div></div>`;
+    return `<div class="session-card"><div class="session-card-header"><div><div style="font-weight:700;font-size:16px">${ex.name}</div>${e1rmHtml}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--blue)">${fmtNum(vol)} kg</div></div>${pastPRHtml}${tipsHtml}${setsHtml}${timerHtml}${copyBtnHtml}<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" onclick="addSet(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">＋ セット</button><button class="btn btn-green" onclick="toggleDone(${ei})" style="flex:1;padding:10px;font-size:14px;margin-top:0">完了 ✓</button></div></div>`;
   }).join('');
   const doneCount=sessionExercises.filter(e=>e.done).length;
   finishWrap.innerHTML=`<div class="finish-btn" onclick="finishWorkout()"><div class="f-title">🏁 トレーニング終了</div><div class="f-sub">${doneCount}/${sessionExercises.length} 種目完了 · ${fmtNum(calcTotalVol(sessionExercises))}kg</div></div>`;
