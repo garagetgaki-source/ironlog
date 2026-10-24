@@ -2256,10 +2256,21 @@ function openExModal(name){
   const tipsHtml=ex.tips?`<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📌 フォームのポイント</div><div style="font-size:14px;line-height:1.7">${ex.tips.replace(/\*\*(.+?)\*\*/g,'<strong style="color:var(--text)">$1</strong>').split('\n').join('<br>')}</div></div>`:'';
   const ytHtml=ex.yt?`<a href="${ex.yt}" target="_blank" style="display:block;background:var(--surface2);border:1px solid #333;border-radius:8px;padding:12px;text-align:center;color:var(--blue);font-size:14px;font-weight:700;text-decoration:none;margin-bottom:12px">▶ YouTube で動画を見る</a>`:'';
   let histHtml='';
-  if(hist.length){const prKey=pr?`${pr.date}-${pr.weight}-${pr.reps}`:null;histHtml=`<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 記録履歴</div>`+hist.map(h=>{const isPR=prKey&&`${h.date}-${h.weight}-${h.reps}`===prKey;return `<div class="hist-row"><span style="color:var(--text2)">${fmtDateJP(h.date)} SET${h.set}</span><span class="${isPR?'hist-pr':''}">${h.weight}kg × ${h.reps}回${isPR?' 🏆':''}</span></div>`;}).join('')+`</div>`;}
+  if(hist.length){
+    const prKey=pr?`${pr.date}-${pr.weight}-${pr.reps}`:null;
+    const dates=[...new Set(hist.map(h=>h.date))];
+    const recent=new Set(dates.slice(0,2));
+    const rowHtml=h=>{const isPR=prKey&&`${h.date}-${h.weight}-${h.reps}`===prKey;return `<div class="hist-row"><span style="color:var(--text2)">${fmtDateJP(h.date)} SET${h.set}</span><span class="${isPR?'hist-pr':''}">${h.weight}kg × ${h.reps}回${isPR?' 🏆':''}</span></div>`;};
+    const recentRows=hist.filter(h=>recent.has(h.date)).map(rowHtml).join('');
+    const olderList=hist.filter(h=>!recent.has(h.date));
+    const olderRows=olderList.map(rowHtml).join('');
+    const moreHtml=olderList.length?`<div id="hist-older" style="display:none">${olderRows}</div><button id="hist-more-btn" class="btn btn-secondary" onclick="toggleOlderHist(${dates.length-2})" style="padding:8px;font-size:13px;margin-top:6px">▼ もっと見る（さらに${dates.length-2}回分）</button>`:'';
+    histHtml=`<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 記録履歴</div>${recentRows}${moreHtml}</div>`;
+  }
   document.getElementById('modal-ex-content').innerHTML=prHtml+tipsHtml+ytHtml+histHtml+`<button class="btn btn-primary" onclick="addExToSession('${esc(name)}');closeExModal()">＋ 今日のセッションに追加</button>`;
   document.getElementById('ex-modal').classList.add('open');
 }
+function toggleOlderHist(n){const el=document.getElementById('hist-older'),b=document.getElementById('hist-more-btn');if(!el||!b)return;const open=el.style.display==='none';el.style.display=open?'block':'none';b.textContent=open?'▲ 閉じる':`▼ もっと見る（さらに${n}回分）`;}
 function closeExModal(){document.getElementById('ex-modal').classList.remove('open');}
 function openAddModal(){renderCatTabs();document.getElementById('add-ex-modal').classList.add('open');}
 function closeAddModal(){document.getElementById('add-ex-modal').classList.remove('open');}
