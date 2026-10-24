@@ -224,6 +224,25 @@ html,body{background:var(--bg);background-image:radial-gradient(ellipse at 50% 1
 .accordion-arrow.open{transform:rotate(180deg)}
 .accordion-body{display:none;background:var(--surface);padding:8px}
 .accordion-body.open{display:block}
+#finish-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-55%) scale(0.8);z-index:1001;background:var(--glass);backdrop-filter:blur(20px);border:2px solid var(--neon-orange);border-radius:20px;padding:26px 20px 20px;width:90%;max-width:380px;max-height:88vh;overflow-y:auto;text-align:center;opacity:0;transition:all .45s cubic-bezier(.175,.885,.32,1.275);pointer-events:none;box-shadow:0 0 50px rgba(255,69,0,0.55)}
+#finish-modal.show{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+#finish-modal.record{border-color:var(--neon-gold);box-shadow:0 0 60px rgba(255,214,0,0.7)}
+.fin-label{font-size:12px;letter-spacing:3px;color:var(--text2);margin-bottom:4px}
+.fin-record{display:inline-block;font-size:13px;font-weight:900;color:#000;background:linear-gradient(135deg,#ffd600,#ff9100);border-radius:20px;padding:4px 14px;margin-bottom:8px}
+.fin-vol{font-family:'Barlow Condensed',sans-serif;font-size:64px;font-weight:900;line-height:1;background:linear-gradient(135deg,var(--neon-red),var(--neon-gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.fin-vol span{font-size:28px}
+.fin-cheer{font-size:16px;font-weight:700;margin:10px 0 4px}
+.fin-compare{font-size:13px;color:var(--text2);margin-top:4px;line-height:1.6}
+.fin-stats{display:flex;gap:8px;margin:14px 0 4px}
+.fin-stat{flex:1;background:var(--surface2);border-radius:10px;padding:8px 2px}
+.fin-stat b{display:block;font-family:'Barlow Condensed',sans-serif;font-size:22px;color:var(--text)}
+.fin-stat i{font-style:normal;font-size:10px;color:var(--text2)}
+.fin-bars{text-align:left;margin-top:14px}
+.fin-bar-row{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px}
+.fin-bar-name{width:40px;color:var(--text2)}
+.fin-bar-track{flex:1;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden}
+.fin-bar-fill{height:100%;border-radius:5px}
+.fin-bar-val{width:70px;text-align:right;color:var(--text)}
 #pr-overlay{position:fixed;inset:0;z-index:999;pointer-events:none;overflow:hidden}
 #pr-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-60%) scale(0.8);z-index:1000;background:var(--glass);backdrop-filter:blur(20px);border:2px solid var(--neon-orange);border-radius:20px;padding:28px 24px;width:88%;max-width:360px;text-align:center;opacity:0;transition:all .4s cubic-bezier(.175,.885,.32,1.275);pointer-events:none;box-shadow:0 0 40px rgba(255,69,0,0.5)}
 #pr-modal.show{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
@@ -289,6 +308,16 @@ html,body{background:var(--bg);background-image:radial-gradient(ellipse at 50% 1
   </div>
   <div class="toast" id="toast"></div>
   <div id="pr-overlay"></div>
+  <div id="finish-modal">
+    <div class="fin-label">TODAY'S TOTAL VOLUME</div>
+    <div id="fin-record-wrap"></div>
+    <div class="fin-vol" id="fin-vol"></div>
+    <div class="fin-cheer" id="fin-cheer"></div>
+    <div class="fin-compare" id="fin-compare"></div>
+    <div class="fin-stats" id="fin-stats"></div>
+    <div class="fin-bars" id="fin-bars"></div>
+    <button class="pr-close-btn" onclick="closeFinishModal()">お疲れ様でした 🔥</button>
+  </div>
   <div id="pr-modal">
     <div class="pr-modal-label">NEW PERSONAL RECORD</div>
     <div class="pr-modal-title" id="pr-modal-exname"></div>
@@ -1836,10 +1865,10 @@ function calcWaterScore(){
 // PR演出
 // =====================
 const CONFETTI_COLORS=['#ff4500','#ff6a00','#ffb300','#ffffff','#ff4500','#ffb300'];
-function launchConfetti(){
+function launchConfetti(count){
   const overlay=document.getElementById('pr-overlay');
   overlay.innerHTML='';
-  for(let i=0;i<80;i++){
+  for(let i=0;i<(count||80);i++){
     const el=document.createElement('div');
     el.className='confetti';
     el.style.left=Math.random()*100+'vw';
@@ -1984,6 +2013,9 @@ function initBackButton(){
   history.pushState({page:'app'},'',location.href);
 
   window.addEventListener('popstate',function(e){
+    // 終了ポップアップが開いていれば先に閉じる
+    const fm=document.getElementById('finish-modal');
+    if(fm&&fm.classList.contains('show')){closeFinishModal();history.pushState({page:'app'},'',location.href);return;}
     // まずモーダルが開いているか確認
     const openModals=['today-modal','settings-modal','ex-modal','add-ex-modal','water-modal'];
     let closedModal=false;
@@ -2346,7 +2378,7 @@ let motivIdx=0;
 let motivInterval=null;
 let motivFetched=false;
 function loadTodayTraining(){sessionExercises=DB.get('train_'+today())||[];}
-function addExToSession(name){loadTodayTraining();if(sessionExercises.find(e=>e.name===name)){toast('⚠ すでに追加済みです','#cc3300');return;}sessionExercises.push({name,sets:[{weight:0,reps:0}],done:false});DB.set('train_'+today(),sessionExercises);if(sessionExercises.length===1)startSessionMotivation();renderTrainExercises();toast('✓ '+name+' をセッションに追加！');}
+function addExToSession(name){loadTodayTraining();if(sessionExercises.find(e=>e.name===name)){toast('⚠ すでに追加済みです','#cc3300');return;}sessionExercises.push({name,sets:[{weight:0,reps:0}],done:false});DB.set('train_'+today(),sessionExercises);if(!DB.get('sstart_'+today()))DB.set('sstart_'+today(),Date.now());if(sessionExercises.length===1)startSessionMotivation();renderTrainExercises();toast('✓ '+name+' をセッションに追加！');}
 function addSet(exIdx){loadTodayTraining();sessionExercises[exIdx].sets.push({weight:0,reps:0});DB.set('train_'+today(),sessionExercises);renderTrainExercises();}
 function removeSet(exIdx,setIdx){loadTodayTraining();if(sessionExercises[exIdx].sets.length<=1)sessionExercises.splice(exIdx,1);else sessionExercises[exIdx].sets.splice(setIdx,1);DB.set('train_'+today(),sessionExercises);if(!sessionExercises.length)stopSessionMotivation();renderTrainExercises();}
 function updateSet(exIdx,setIdx,field,val){
@@ -2361,7 +2393,85 @@ function updateSet(exIdx,setIdx,field,val){
   }
 }
 function toggleDone(exIdx){loadTodayTraining();sessionExercises[exIdx].done=!sessionExercises[exIdx].done;DB.set('train_'+today(),sessionExercises);renderTrainExercises();if(sessionExercises[exIdx].done)toast('✓ '+sessionExercises[exIdx].name+' 完了！');}
-function finishWorkout(){loadTodayTraining();const vol=calcTotalVol(sessionExercises);sessionExercises.forEach(e=>e.done=true);DB.set('train_'+today(),sessionExercises);toast(`🏁 トレーニング完了！ ${fmtNum(vol)}kg`);renderTrainExercises();renderDashboard();}
+function finishWorkout(){
+  loadTodayTraining();
+  const vol=calcTotalVol(sessionExercises);
+  sessionExercises.forEach(e=>e.done=true);
+  DB.set('train_'+today(),sessionExercises);
+  renderTrainExercises();renderDashboard();
+  if(vol<=0){toast('⚠ 重量と回数が未入力です','#cc3300');return;}
+  showFinishModal(vol);
+}
+const VOL_REFS=[{n:'大型トラック',kg:10000,u:'台'},{n:'アフリカゾウ',kg:5000,u:'頭'},{n:'軽自動車',kg:900,u:'台'},{n:'グランドピアノ',kg:300,u:'台'},{n:'大人の男性',kg:70,u:'人'}];
+function volCompare(vol){
+  const r=VOL_REFS.find(r=>vol>=r.kg);
+  if(!r)return '';
+  const n=Math.floor(vol/r.kg*10)/10;
+  return `${r.n}約${n}${r.u}分を持ち上げたよ！`;
+}
+function getFinishStats(vol){
+  const t=today();
+  const vols=[];
+  Object.keys(localStorage).filter(k=>k.startsWith('ironlog_train_')).forEach(k=>{
+    const date=k.replace('ironlog_train_','');
+    try{const v=calcTotalVol(JSON.parse(localStorage.getItem(k)||'[]'));if(v>0)vols.push({date,vol:v});}catch(e){}
+  });
+  const past=vols.filter(x=>x.date!==t).sort((a,b)=>b.date.localeCompare(a.date));
+  const prev=past[0]||null;
+  const bestPast=past.reduce((m,x)=>Math.max(m,x.vol),0);
+  // 今週（月曜始まり）のトレーニング回数
+  const now=new Date();const dow=(now.getDay()+6)%7;
+  const mon=new Date(now.getFullYear(),now.getMonth(),now.getDate()-dow);
+  const monKey=`${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+  const weekCount=new Set(vols.filter(x=>x.date>=monKey&&x.date<=t).map(x=>x.date).concat([t])).size;
+  // 連続トレーニング日数
+  const dset=new Set(vols.map(x=>x.date));dset.add(t);
+  let streak=0;const d=new Date();
+  while(true){
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if(dset.has(key)){streak++;d.setDate(d.getDate()-1);}else break;
+  }
+  return {prev,bestPast,isRecord:bestPast>0&&vol>bestPast,weekCount,streak};
+}
+function showFinishModal(vol){
+  const ex=sessionExercises;
+  const st=getFinishStats(vol);
+  const exMaster=getExercises();const groups=getMuscleGroups();
+  // 部位別ボリューム
+  const byCat={};
+  ex.forEach(e=>{const m=exMaster.find(x=>x.name===e.name);const cat=m?m.cat:'その他';byCat[cat]=(byCat[cat]||0)+e.sets.reduce((a,x)=>a+x.weight*x.reps,0);});
+  const catList=Object.entries(byCat).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const maxV=catList.length?catList[0][1]:1;
+  // セット数・PR数・時間
+  const setCount=ex.reduce((a,e)=>a+e.sets.filter(x=>x.weight>0&&x.reps>0).length,0);
+  let prCount=0;
+  ex.forEach(e=>{const past=getPastPR(e.name);let best=null;e.sets.forEach(x=>{if(x.weight>0&&x.reps>0&&(!best||x.weight>best.weight||(x.weight===best.weight&&x.reps>best.reps)))best=x;});if(best&&(!past||best.weight>past.weight||(best.weight===past.weight&&best.reps>past.reps)))prCount++;});
+  const start=DB.get('sstart_'+today());
+  let durText='--';
+  if(start){const m=Math.round((Date.now()-start)/60000);if(m>0&&m<600)durText=m>=60?`${Math.floor(m/60)}h${m%60}m`:`${m}分`;}
+  // 描画
+  document.getElementById('fin-vol').innerHTML=`${fmtNum(vol).toLocaleString()}<span>kg</span>`;
+  document.getElementById('fin-record-wrap').innerHTML=st.isRecord?'<div class="fin-record">🏆 自己ベスト総重量を更新！</div>':'';
+  document.getElementById('fin-cheer').textContent=st.isRecord?'最高の1日！お疲れ様でした！！🎉':'本日のトレーニング、お疲れ様でした！！💪';
+  const cmp=[];
+  const vc=volCompare(vol);if(vc)cmp.push(vc);
+  if(st.prev){const diff=Math.round((vol-st.prev.vol)*10)/10;cmp.push(`前回（${fmtDateJP(st.prev.date)}）比 ${diff>=0?'+':''}${diff.toLocaleString()}kg`);}
+  document.getElementById('fin-compare').innerHTML=cmp.join('<br>');
+  const stats=[[setCount,'総セット'],[durText,'時間'],[prCount,'PR更新'],[st.weekCount,'今週の回数']];
+  if(st.streak>=2)stats.push([st.streak+'日','連続']);
+  document.getElementById('fin-stats').innerHTML=stats.map(([v,l])=>`<div class="fin-stat"><b>${v}</b><i>${l}</i></div>`).join('');
+  document.getElementById('fin-bars').innerHTML=catList.length?catList.map(([cat,v])=>{const g=groups.find(x=>x.name===cat);const col=g?g.color:'#90a4ae';return `<div class="fin-bar-row"><div class="fin-bar-name">${cat}</div><div class="fin-bar-track"><div class="fin-bar-fill" style="width:${Math.max(4,Math.round(v/maxV*100))}%;background:${col}"></div></div><div class="fin-bar-val">${fmtNum(v).toLocaleString()}kg</div></div>`;}).join(''):'';
+  const fm=document.getElementById('finish-modal');
+  fm.classList.toggle('record',st.isRecord);
+  fm.scrollTop=0;
+  fm.classList.add('show');
+  launchConfetti(st.isRecord?170:110);
+  if(st.isRecord)setTimeout(()=>launchConfetti(110),1800);
+}
+function closeFinishModal(){
+  document.getElementById('finish-modal').classList.remove('show');
+  document.getElementById('pr-overlay').innerHTML='';
+}
 function calcTotalVol(exList){return exList.reduce((s,ex)=>s+ex.sets.reduce((ss,set)=>ss+(set.weight*set.reps),0),0);}
 function updateVolDisplay(){loadTodayTraining();const vol=calcTotalVol(sessionExercises);const el=document.getElementById('train-total-vol');if(el)el.textContent=fmtNum(vol)+' kg';const card=document.getElementById('train-vol-card');if(card)card.style.display=sessionExercises.length?'block':'none';}
 function renderTrainExercises(){
